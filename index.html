@@ -4,24 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ترجمان — ترجمة عربي ⇄ إنجليزي</title>
-<!-- Offline version: no account needed. Host it together with sw.js (rename this file to index.html) to use it with no internet at all. -->
 <style>
 :root {
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  --paper: #EAF1F2;
-  --surface: #FFFFFF;
-  --ink: #0E2A33;
-  --muted: #5A6F77;
-  --line: #CFDCDF;
-  --accent: #0E7C86;
-  --accent-ink: #FFFFFF;
-  --accent-soft: #D7ECEE;
-  --good: #1B8A4B;
-  --good-soft: #D8F0E2;
-  --bad: #C2383B;
-  --bad-soft: #F8DEDF;
+  --paper: #EAF1F2; --surface: #FFFFFF; --ink: #0E2A33; --muted: #5A6F77;
+  --line: #CFDCDF; --accent: #0E7C86; --accent-ink: #FFFFFF; --accent-soft: #D7ECEE;
+  --good: #1B8A4B; --good-soft: #D8F0E2; --bad: #C2383B; --bad-soft: #F8DEDF;
   --font: "Readex Pro", system-ui, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -38,59 +28,44 @@
 }
 *, *::before, *::after { box-sizing: inherit; }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-body {
-  margin: 0; background: var(--paper); color: var(--ink);
-  font-family: var(--font); font-size: 17px; line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
-}
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
 button, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-
 .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 64px; }
-
 header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .brand { font-weight: 700; font-size: 30px; letter-spacing: 0; margin: 0; line-height: 1.2; }
 .brand small { display: block; font-weight: 300; font-size: 14px; color: var(--muted); margin-top: 2px; }
 .theme-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; width: 42px; height: 42px; display: grid; place-items: center; }
-
 nav.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 5px; margin-bottom: 18px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 6px); z-index: 5; }
 nav.tabs button { border: 0; background: transparent; border-radius: 10px; padding: 10px 8px; font-weight: 500; color: var(--muted); }
 nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
 .count { display: inline-block; min-width: 1.6em; padding: 0 6px; margin-inline-start: 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 13px; }
 nav.tabs button[aria-selected="true"] .count { background: rgba(255,255,255,.22); color: var(--accent-ink); }
-
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
 .card + .card { margin-top: 14px; }
-
 .dir-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--muted); font-size: 15px; }
 .dir-badge { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 2px 14px; font-weight: 500; }
-
 textarea { width: 100%; min-height: 150px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--paper); font-size: 20px; line-height: 1.6; }
 textarea::placeholder { color: var(--muted); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
 .row .grow { flex: 1; }
 .hint { color: var(--muted); font-size: 14px; }
-
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 18px; font-weight: 500; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn.primary:disabled { opacity: .55; cursor: progress; }
 .btn.small { padding: 5px 12px; font-size: 14px; border-radius: 9px; }
 .btn.danger { color: var(--bad); }
-
 .result { margin-top: 14px; }
 .result .src { color: var(--muted); font-size: 16px; margin: 0 0 6px; }
 .result .out { font-size: 28px; line-height: 1.5; font-weight: 500; margin: 0; word-break: break-word; }
 .result .out[dir="ltr"] { text-align: left; }
 .err { color: var(--bad); background: var(--bad-soft); border-radius: 10px; padding: 10px 14px; margin-top: 14px; }
-
 .words-title { margin: 18px 0 8px; font-size: 15px; font-weight: 500; color: var(--muted); }
 .words { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
 .word { border: 1px solid var(--line); border-inline-start: 4px solid var(--accent); border-radius: 10px; padding: 8px 12px; background: var(--paper); }
 .word .en { direction: ltr; text-align: left; font-weight: 600; font-size: 17px; line-height: 1.4; }
 .word .ar { color: var(--muted); font-size: 16px; line-height: 1.4; }
-
-/* quiz */
 .quiz h2 { margin: 0 0 4px; font-size: 20px; }
 .quiz .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; margin-bottom: 14px; }
 .bar { height: 6px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; margin-bottom: 18px; }
@@ -112,8 +87,6 @@ textarea::placeholder { color: var(--muted); }
 .score { font-size: 54px; font-weight: 700; text-align: center; line-height: 1.2; margin: 6px 0; }
 .center { text-align: center; }
 .missed { margin-top: 14px; }
-
-/* history list */
 .sec-title { display: flex; justify-content: space-between; align-items: center; margin: 26px 0 10px; }
 .sec-title h2 { margin: 0; font-size: 19px; }
 .entry .tx { display: grid; gap: 4px; margin-bottom: 10px; }
@@ -124,7 +97,6 @@ textarea::placeholder { color: var(--muted); }
 .entry time { color: var(--muted); font-size: 13px; }
 .empty { text-align: center; color: var(--muted); padding: 28px 12px; }
 .empty b { display: block; color: var(--ink); font-size: 19px; margin-bottom: 4px; }
-
 .spk { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; min-width: 36px; height: 36px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 16px; line-height: 1; flex: none; }
 .spk.lbl { font-size: 14px; padding: 0 14px; }
 .spk:hover { border-color: var(--accent); }
@@ -158,6 +130,7 @@ textarea::placeholder { color: var(--muted); }
 .btns { display: flex; gap: 6px; flex: none; }
 .spk.del { color: var(--bad); }
 .hidden-view { display: none; }
+.src-tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-inline-start: 8px; }
 @media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
 </style>
 </head>
@@ -187,11 +160,12 @@ textarea::placeholder { color: var(--muted); }
         </div>
         <div id="resultBox" class="result" aria-live="polite"></div>
       </div>
-    
+
       <div class="card" id="offlineCard">
-        <h2 style="margin:0 0 6px;font-size:18px">ترجمة كاملة بدون إنترنت</h2>
-        <p class="hint" style="margin:0 0 10px">نزّل نموذج الترجمة مرة وحدة وأنت متصل (حجمه حوالي 150 ميجا للاتجاهين)، وبعدها يترجم أي نص على جهازك بدون إنترنت. الترجمة أبطأ شوي من الأونلاين.</p>
+        <h2 style="margin:0 0 6px;font-size:18px">ترجمة كاملة بدون إنترنت (الأفضل جودة)</h2>
+        <p class="hint" style="margin:0 0 10px">نزّل نموذج الترجمة مرة وحدة وأنت متصل (حجمه حوالي 150 ميجا للاتجاهين). الترجمة بعدها تصير أفضل وأدق من الأونلاين، وتشتغل بدون إنترنت.</p>
         <div class="row" style="margin-top:0"><button class="btn primary" id="dlBtn">نزّل نموذج الترجمة</button><span class="hint" id="dlState"></span></div>
+        <div class="row" style="margin-top:8px"><button class="btn small danger" id="clearCacheBtn">مسح كاش الترجمات القديمة</button><span class="hint" id="cacheState"></span></div>
       </div>
     </section>
 
@@ -210,7 +184,6 @@ textarea::placeholder { color: var(--muted); }
 (function () {
   "use strict";
 
-  /* ---------- helpers ---------- */
   const $ = (id) => document.getElementById(id);
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -226,7 +199,7 @@ textarea::placeholder { color: var(--muted); }
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const norm = (s) => String(s).trim().toLowerCase();
 
-  /* ---------- pronunciation (browser text-to-speech) ---------- */
+  /* ---------- pronunciation ---------- */
   const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
   let enVoice = null;
   function pickVoice() {
@@ -249,7 +222,7 @@ textarea::placeholder { color: var(--muted); }
       slow ? "🐢" : "🔊", label ? h("span", null, label) : null);
   }
 
-  /* ---------- storage (per browser) ---------- */
+  /* ---------- storage ---------- */
   const HKEY = "tarjuman:history:v1", SKEY = "tarjuman:stats:v1";
   let memH = [], memS = {};
   function read(key, fallback, mem) {
@@ -260,47 +233,9 @@ textarea::placeholder { color: var(--muted); }
   }
   let history = read(HKEY, [], memH);
   let stats = read(SKEY, {}, memS);
-  /* cloud sync: history lives in the viewer's private db doc, so it follows the account across devices and reloads */
-  let dbDoc = null, cloudReady = false, saveTimer = null;
-  function pushCloud() {
-    if (!dbDoc || !cloudReady) return;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      dbDoc.set({ history: history, stats: stats, updated: Date.now() }).catch(() => setSync("تعذّر حفظ السجل في حسابك"));
-    }, 400);
-  }
-  const saveHistory = () => { write(HKEY, history, (v) => (memH = v)); pushCloud(); };
-  const saveStats = () => { write(SKEY, stats, (v) => (memS = v)); pushCloud(); };
+  const saveHistory = () => write(HKEY, history, (v) => (memH = v));
+  const saveStats = () => write(SKEY, stats, (v) => (memS = v));
   function setSync(t) { const el = document.getElementById("syncState"); if (el) el.textContent = t; }
-
-  async function cloudInit() {
-    try {
-      const c = window.claude;
-      if (!c || !c.use) { setSync("السجل محفوظ في هذا المتصفح فقط"); return; }
-      const db = await c.use("db"), user = await c.use("user");
-      const uid = user ? await user.id() : null;
-      if (!db || !uid) { setSync("السجل محفوظ في هذا المتصفح فقط"); return; }
-      dbDoc = db.doc("data/users/" + uid + "/state");
-      const snap = await dbDoc.get();
-      if (snap.exists) {
-        const d = JSON.parse(JSON.stringify(snap.data() || {}));
-        const byId = new Map();
-        for (const e of [].concat(Array.isArray(d.history) ? d.history : [], history)) if (e && e.id && !byId.has(e.id)) byId.set(e.id, e);
-        history = [...byId.values()].sort((a, b) => b.ts - a.ts).slice(0, 200);
-        const st = d.stats && typeof d.stats === "object" ? d.stats : {};
-        for (const k in st) { const a = stats[k], b = st[k]; if (!a || (b.r + b.w) > (a.r + a.w)) stats[k] = b; }
-      }
-      cloudReady = true;
-      write(HKEY, history, (v) => (memH = v)); write(SKEY, stats, (v) => (memS = v));
-      pushCloud();
-      setSync("السجل محفوظ في حسابك ويظهر على كل أجهزتك");
-      updateCount();
-      if (!$("viewHi").classList.contains("hidden-view")) {
-        renderList();
-        if (!quiz || (quiz.i === 0 && !quiz.answered)) startRound(null);
-      }
-    } catch (e) { setSync("السجل محفوظ في هذا المتصفح فقط"); }
-  }
 
   /* ---------- theme ---------- */
   $("themeBtn").addEventListener("click", () => {
@@ -321,10 +256,9 @@ textarea::placeholder { color: var(--muted); }
   }
   $("tabTr").addEventListener("click", () => showTab("tr"));
   $("tabHi").addEventListener("click", () => showTab("hi"));
-
   function updateCount() { $("histCount").textContent = history.length; }
 
-  /* ---------- translate (live while typing) ---------- */
+  /* ---------- translate ---------- */
   const input = $("input"), goBtn = $("goBtn");
   let reqSeq = 0, liveTimer = null, ctrl = null, lastId = null, denied = false, pauseUntil = 0;
 
@@ -347,22 +281,27 @@ textarea::placeholder { color: var(--muted); }
   $("clearBtn").addEventListener("click", () => { input.value = ""; stopLive(); lastId = null; $("resultBox").replaceChildren(); updateDir(); input.focus(); });
   goBtn.addEventListener("click", () => { clearTimeout(liveTimer); doTranslate(false); });
 
-  function parseJSON(t) {
-    t = String(t).replace(/```json|```/g, "").trim();
-    const s = t.indexOf("{"), e = t.lastIndexOf("}");
-    if (s < 0 || e < 0) throw new Error("bad json");
-    return JSON.parse(t.slice(s, e + 1));
-  }
-
   function showError(msg) { $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, msg)); }
 
-  /* ---------- free translation (no account needed): MyMemory + Free Dictionary API ---------- */
-  const MM_EMAIL = ""; // optional: put your email here (free) to raise MyMemory's daily limit from about 5,000 to 50,000 characters
+  /* ---------- online translation sources ---------- */
   const STOP = new Set(("a an the and or but if of to in on at by for with from as is am are was were be been being it its this that these those i you he she we they me him her us them my your his our their do does did have has had will would can could should may might not no so than then there here what which who whom when where why how into out up down over under about very just also").split(" "));
   const isAbort = (e) => e && e.name === "AbortError";
 
+  // Google Translate (unofficial, works well for Arabic, most reliable)
+  async function googleTranslate(text, dir, signal) {
+    const sl = dir === "ar-en" ? "ar" : "en";
+    const tl = dir === "ar-en" ? "en" : "ar";
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+    const r = await fetch(url, { signal });
+    if (!r.ok) throw new Error("net");
+    const j = await r.json();
+    if (!j || !j[0] || !Array.isArray(j[0])) throw new Error("bad");
+    return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
+  }
+
+  // MyMemory (backup)
   async function mm(q, pair, signal) {
-    const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(q) + "&langpair=" + pair + (MM_EMAIL ? "&de=" + encodeURIComponent(MM_EMAIL) : "");
+    const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(q) + "&langpair=" + pair;
     const r = await fetch(url, { signal });
     if (r.status === 429) throw new Error("quota");
     if (!r.ok) throw new Error("net");
@@ -372,10 +311,21 @@ textarea::placeholder { color: var(--muted); }
     return String(t).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").trim();
   }
 
-  async function freeTranslate(text, dir, signal) {
+  async function onlineTranslate(text, dir, signal) {
     const src = text.slice(0, 450);
+    // Try Google first
+    try {
+      const translation = await googleTranslate(src, dir, signal);
+      if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate");
+    } catch (e) { if (isAbort(e)) throw e; }
+    // Fallback to MyMemory
     const translation = await mm(src, dir === "ar-en" ? "ar|en" : "en|ar", signal);
-    const enText = dir === "ar-en" ? translation : src;
+    return await enrichWords(text, dir, translation, signal, "MyMemory");
+  }
+
+  // Given a translation, extract words + examples
+  async function enrichWords(text, dir, translation, signal, sourceName) {
+    const enText = dir === "ar-en" ? translation : text;
     const toks = (enText.toLowerCase().match(/[a-z][a-z'-]*/g) || []).map((w) => w.replace(/^['-]+|['-]+$/g, "")).filter(Boolean);
     const single = toks.length === 1;
     const seen = new Set(), picked = [];
@@ -388,10 +338,12 @@ textarea::placeholder { color: var(--muted); }
     const top = picked.slice(0, 4);
 
     const wordsP = (async () => {
-      if (single) return [{ en: top[0], ar: dir === "en-ar" ? translation : src }];
+      if (single) return [{ en: top[0], ar: dir === "en-ar" ? translation : text.trim() }];
       const out = await Promise.all(top.map(async (w) => {
-        try { const ar = await mm(w, "en|ar", signal); return ar && !/[a-z]/i.test(ar) ? { en: w, ar } : null; }
-        catch (e) { if (isAbort(e)) throw e; return null; }
+        try {
+          const ar = await googleTranslate(w, "en-ar", signal).catch(() => mm(w, "en|ar", signal));
+          return ar && !/[a-z]/i.test(ar) ? { en: w, ar } : null;
+        } catch (e) { if (isAbort(e)) throw e; return null; }
       }));
       return out.filter(Boolean);
     })();
@@ -407,22 +359,22 @@ textarea::placeholder { color: var(--muted); }
             for (const ent of Array.isArray(j) ? j : []) for (const m of ent.meanings || []) for (const d of m.definitions || [])
               if (d.example && d.example.length <= 140 && found.length < 2 && !found.includes(d.example)) found.push(d.example);
             const tr = await Promise.all(found.map(async (s) => {
-              try { return { en: s, ar: await mm(s, "en|ar", signal) }; }
+              try { return { en: s, ar: await googleTranslate(s, "en-ar", signal).catch(() => mm(s, "en|ar", signal)) }; }
               catch (e) { if (isAbort(e)) throw e; return null; }
             }));
             for (const x of tr) if (x) ex.push(x);
           }
         } catch (e) { if (isAbort(e)) throw e; }
       }
-      if (!ex.length && toks.length >= 3) ex.push({ en: enText.slice(0, 200), ar: dir === "ar-en" ? src : translation });
+      if (!ex.length && toks.length >= 3) ex.push({ en: enText.slice(0, 200), ar: dir === "ar-en" ? text : translation });
       return ex;
     })();
 
     const [words, examples] = await Promise.all([wordsP, examplesP]);
-    return { translation, words, examples };
+    return { translation, words, examples, note: "من " + sourceName };
   }
 
-  /* ---------- offline support: built-in dictionary + cache of everything you looked up before ---------- */
+  /* ---------- cache ---------- */
   const CKEY = "tarjuman:cache:v1";
   let cache = read(CKEY, {}, {});
   function cacheGet(text, dir) { const c = cache[dir + "|" + norm(text)]; return c ? c.data : null; }
@@ -433,8 +385,18 @@ textarea::placeholder { color: var(--muted); }
     if (keys.length > 400) keys.sort((a, b) => cache[a].ts - cache[b].ts).slice(0, keys.length - 400).forEach((k) => delete cache[k]);
     write(CKEY, cache, () => {});
   }
+  function refreshCacheUI() {
+    const n = Object.keys(cache).length;
+    $("cacheState").textContent = n ? "(" + n + " ترجمة محفوظة)" : "(الكاش فاضي)";
+  }
+  $("clearCacheBtn").addEventListener("click", () => {
+    if (!confirm("تبي تمسح كل الترجمات المحفوظة في الكاش؟ (السجل ما ينتأثر)")) return;
+    cache = {}; write(CKEY, {}, () => {}); refreshCacheUI();
+    $("cacheState").textContent = "(تم المسح ✓)";
+  });
 
-  const DICT_RAW = "hello=مرحبا|hi=أهلا|goodbye=مع السلامة|thanks=شكرا|thank you=شكرا لك|thank=يشكر|please=من فضلك|sorry=آسف|welcome=أهلا وسهلا|yes=نعم|no=لا|maybe=ربما|okay=حسنا|good morning=صباح الخير|good evening=مساء الخير|good night=تصبح على خير|how are you=كيف حالك|excuse me=عذرا|see you later=أراك لاحقا|i love you=أحبك|i do not understand=لا أفهم|what is your name=ما اسمك|how much=بكم|where is=أين|morning=صباح|evening=مساء|night=ليل|man=رجل|woman=امرأة|boy=ولد|girl=بنت|child=طفل|baby=رضيع|father=أب|mother=أم|brother=أخ|sister=أخت|son=ابن|daughter=ابنة|husband=زوج|wife=زوجة|family=عائلة|friend=صديق|neighbor=جار|teacher=معلم|student=طالب|doctor=طبيب|nurse=ممرضة|engineer=مهندس|driver=سائق|worker=عامل|boss=مدير|king=ملك|people=ناس|person=شخص|food=طعام|water=ماء|milk=حليب|tea=شاي|coffee=قهوة|juice=عصير|bread=خبز|rice=أرز|meat=لحم|chicken=دجاج|fish=سمك|egg=بيضة|cheese=جبن|butter=زبدة|sugar=سكر|salt=ملح|oil=زيت|soup=شوربة|salad=سلطة|fruit=فاكهة|vegetable=خضار|apple=تفاح|banana=موز|orange=برتقال|grape=عنب|date=تمر،تاريخ|lemon=ليمون|tomato=طماطم|potato=بطاطس|onion=بصل|garlic=ثوم|cake=كعكة|honey=عسل|breakfast=فطور|lunch=غداء|dinner=عشاء|hungry=جائع|thirsty=عطشان|delicious=لذيذ|cook=يطبخ|eat=يأكل|drink=يشرب|house=بيت|home=منزل|room=غرفة|door=باب|window=نافذة|table=طاولة|chair=كرسي|bed=سرير|kitchen=مطبخ|bathroom=حمام|garden=حديقة|key=مفتاح|book=كتاب|pen=قلم|paper=ورق|phone=هاتف|computer=حاسوب|television=تلفاز|car=سيارة|bus=حافلة|train=قطار|plane=طائرة|ship=سفينة|bicycle=دراجة|taxi=سيارة أجرة|road=طريق|street=شارع|city=مدينة|village=قرية|country=بلد|school=مدرسة|university=جامعة|hospital=مستشفى|market=سوق|shop=متجر|bank=بنك|mosque=مسجد|airport=مطار|hotel=فندق|restaurant=مطعم|office=مكتب|bag=حقيبة|clothes=ملابس|shirt=قميص|shoes=حذاء|hat=قبعة|money=مال|price=سعر|ticket=تذكرة|picture=صورة|music=موسيقى|game=لعبة|gift=هدية|map=خريطة|passport=جواز سفر|visa=تأشيرة|luggage=أمتعة|police=شرطة|electricity=كهرباء|internet=إنترنت|message=رسالة|sun=شمس|moon=قمر|star=نجمة|sky=سماء|sea=بحر|river=نهر|mountain=جبل|desert=صحراء|tree=شجرة|flower=زهرة|rain=مطر|wind=رياح|snow=ثلج|ice=جليد|fire=نار|earth=أرض|weather=طقس|hot=حار|cold=بارد|warm=دافئ|day=يوم|week=أسبوع|month=شهر|year=سنة|hour=ساعة|minute=دقيقة|second=ثانية|time=وقت|today=اليوم|tomorrow=غدا|yesterday=أمس|now=الآن|later=لاحقا|soon=قريبا|always=دائما|never=أبدا|sometimes=أحيانا|monday=الاثنين|tuesday=الثلاثاء|wednesday=الأربعاء|thursday=الخميس|friday=الجمعة|saturday=السبت|sunday=الأحد|dog=كلب|cat=قطة|horse=حصان|camel=جمل|bird=طائر|cow=بقرة|sheep=خروف|lion=أسد|head=رأس|face=وجه|eye=عين|ear=أذن|nose=أنف|mouth=فم|hand=يد|finger=إصبع|leg=ساق|foot=قدم|heart=قلب|body=جسم|hair=شعر|tooth=سن|zero=صفر|one=واحد|two=اثنان|three=ثلاثة|four=أربعة|five=خمسة|six=ستة|seven=سبعة|eight=ثمانية|nine=تسعة|ten=عشرة|hundred=مئة|thousand=ألف|first=أول|last=أخير|half=نصف|red=أحمر|blue=أزرق|green=أخضر|yellow=أصفر|black=أسود|white=أبيض|brown=بني|gray=رمادي|pink=وردي|color=لون|big=كبير|small=صغير|long=طويل|short=قصير|tall=طويل القامة|new=جديد|old=قديم|young=شاب|good=جيد|bad=سيئ|beautiful=جميل|ugly=قبيح|happy=سعيد|sad=حزين|angry=غاضب|tired=متعب|sick=مريض|healthy=صحي|strong=قوي|weak=ضعيف|fast=سريع|slow=بطيء|easy=سهل|difficult=صعب|important=مهم|expensive=غالي|cheap=رخيص|clean=نظيف،ينظف|dirty=متسخ|full=ممتلئ|empty=فارغ|open=يفتح،مفتوح|close=يغلق|near=قريب|far=بعيد|right=يمين،صحيح|left=يسار|heavy=ثقيل|light=خفيف،ضوء|rich=غني|poor=فقير|free=مجاني|safe=آمن|quiet=هادئ|loud=صاخب|busy=مشغول|ready=جاهز|late=متأخر|early=مبكر|different=مختلف|same=نفس|other=آخر|many=كثير|few=قليل|all=كل|some=بعض|more=أكثر|less=أقل|very=جدا|enough=كاف|go=يذهب|come=يأتي|sleep=ينام|wake=يستيقظ|walk=يمشي|run=يركض|sit=يجلس|stand=يقف|read=يقرأ|write=يكتب|speak=يتكلم|say=يقول|tell=يخبر|ask=يسأل|answer=يجيب|listen=يستمع|hear=يسمع|see=يرى|look=ينظر|watch=يشاهد|know=يعرف|think=يفكر|understand=يفهم|learn=يتعلم|teach=يعلّم|study=يدرس|work=يعمل،عمل|play=يلعب|buy=يشتري|sell=يبيع|pay=يدفع|give=يعطي|take=يأخذ|bring=يحضر|send=يرسل|receive=يستلم|make=يصنع|do=يفعل|want=يريد|need=يحتاج|like=يحب|love=يعشق|hate=يكره|help=يساعد|try=يحاول|start=يبدأ|stop=يتوقف|finish=ينهي|wait=ينتظر|find=يجد|lose=يفقد|keep=يحتفظ|put=يضع|carry=يحمل|wear=يرتدي|wash=يغسل|build=يبني|break=يكسر|fix=يصلح|cut=يقطع|draw=يرسم|sing=يغني|dance=يرقص|travel=يسافر|visit=يزور|meet=يقابل|live=يعيش|die=يموت|remember=يتذكر|forget=ينسى|believe=يؤمن|hope=يأمل|feel=يشعر|smile=يبتسم|laugh=يضحك|cry=يبكي|fall=يسقط|climb=يتسلق|swim=يسبح|fly=يطير|drive=يقود|ride=يركب|change=يغير|choose=يختار|decide=يقرر|agree=يوافق|call=يتصل|enter=يدخل|leave=يغادر|return=يعود|arrive=يصل|pray=يصلي|wish=يتمنى|share=يشارك|save=يوفر|win=يفوز|grow=ينمو|pull=يسحب|happen=يحدث|become=يصبح|show=يظهر|move=يتحرك|follow=يتبع|join=ينضم|add=يضيف|count=يعد|throw=يرمي|catch=يمسك|what=ماذا|who=من|where=أين|when=متى|why=لماذا|how=كيف|which=أي|here=هنا|there=هناك|this=هذا|that=ذلك|and=و|or=أو|but=لكن|because=لأن|with=مع|without=بدون|under=تحت|behind=خلف|between=بين|before=قبل|after=بعد|again=مرة أخرى|also=أيضا|only=فقط|already=بالفعل|together=معا|alone=وحيد|life=حياة|death=موت|peace=سلام|war=حرب|health=صحة|job=وظيفة|problem=مشكلة|question=سؤال|idea=فكرة|dream=حلم|name=اسم|word=كلمة|language=لغة|number=رقم|story=قصة|news=أخبار|truth=حقيقة|reason=سبب|example=مثال|way=طريقة|place=مكان|thing=شيء|part=جزء|side=جانب|end=نهاية|beginning=بداية|world=عالم|science=علم|art=فن|history=تاريخ|religion=دين|god=الله|power=قوة|luck=حظ|fear=خوف|joy=فرح|pain=ألم|trip=رحلة|holiday=إجازة|birthday=عيد ميلاد|party=حفلة|meeting=اجتماع|lesson=درس|exam=امتحان|test=اختبار|secret=سر|email=بريد إلكتروني|video=فيديو";
+  /* ---------- built-in dictionary ---------- */
+  const DICT_RAW = "hello=مرحبا|hi=أهلا|goodbye=مع السلامة|thanks=شكرا|thank you=شكرا لك|thank=يشكر|please=من فضلك|sorry=آسف|welcome=أهلا وسهلا|yes=نعم|no=لا|maybe=ربما|okay=حسنا|good morning=صباح الخير|good evening=مساء الخير|good night=تصبح على خير|how are you=كيف حالك|excuse me=عذرا|see you later=أراك لاحقا|i love you=أحبك|i do not understand=لا أفهم|what is your name=ما اسمك|how much=بكم|where is=أين|morning=صباح|evening=مساء|night=ليل|man=رجل|woman=امرأة|boy=ولد|girl=بنت|child=طفل|baby=رضيع|father=أب|mother=أم|brother=أخ|sister=أخت|son=ابن|daughter=ابنة|husband=زوج|wife=زوجة|family=عائلة|friend=صديق|neighbor=جار|teacher=معلم|student=طالب|doctor=طبيب|nurse=ممرضة|engineer=مهندس|driver=سائق|worker=عامل|boss=مدير|king=ملك|people=ناس|person=شخص|food=طعام|water=ماء|milk=حليب|tea=شاي|coffee=قهوة|juice=عصير|bread=خبز|rice=أرز|meat=لحم|chicken=دجاج|fish=سمك|egg=بيضة|cheese=جبن|butter=زبدة|sugar=سكر|salt=ملح|oil=زيت|soup=شوربة|salad=سلطة|fruit=فاكهة|vegetable=خضار|apple=تفاح|banana=موز|orange=برتقال|grape=عنب|lemon=ليمون|tomato=طماطم|potato=بطاطس|onion=بصل|garlic=ثوم|cake=كعكة|honey=عسل|breakfast=فطور|lunch=غداء|dinner=عشاء|hungry=جائع|thirsty=عطشان|delicious=لذيذ|cook=يطبخ|eat=يأكل|drink=يشرب|house=بيت|home=منزل|room=غرفة|door=باب|window=نافذة|table=طاولة|chair=كرسي|bed=سرير|kitchen=مطبخ|bathroom=حمام|garden=حديقة|key=مفتاح|book=كتاب|pen=قلم|paper=ورق|phone=هاتف|computer=حاسوب|television=تلفاز|car=سيارة|bus=حافلة|train=قطار|plane=طائرة|ship=سفينة|bicycle=دراجة|taxi=سيارة أجرة|road=طريق|street=شارع|city=مدينة|village=قرية|country=بلد|school=مدرسة|university=جامعة|hospital=مستشفى|market=سوق|shop=متجر|bank=بنك|mosque=مسجد|airport=مطار|hotel=فندق|restaurant=مطعم|office=مكتب|bag=حقيبة|clothes=ملابس|shirt=قميص|shoes=حذاء|hat=قبعة|money=مال|price=سعر|ticket=تذكرة|picture=صورة|music=موسيقى|game=لعبة|gift=هدية|map=خريطة|passport=جواز سفر|visa=تأشيرة|luggage=أمتعة|police=شرطة|electricity=كهرباء|internet=إنترنت|message=رسالة|sun=شمس|moon=قمر|star=نجمة|sky=سماء|sea=بحر|river=نهر|mountain=جبل|desert=صحراء|tree=شجرة|flower=زهرة|rain=مطر|wind=رياح|snow=ثلج|ice=جليد|fire=نار|earth=أرض|weather=طقس|hot=حار|cold=بارد|warm=دافئ|day=يوم|week=أسبوع|month=شهر|year=سنة|hour=ساعة|minute=دقيقة|second=ثانية|time=وقت|today=اليوم|tomorrow=غدا|yesterday=أمس|now=الآن|later=لاحقا|soon=قريبا|always=دائما|never=أبدا|sometimes=أحيانا|monday=الاثنين|tuesday=الثلاثاء|wednesday=الأربعاء|thursday=الخميس|friday=الجمعة|saturday=السبت|sunday=الأحد|dog=كلب|cat=قطة|horse=حصان|camel=جمل|bird=طائر|cow=بقرة|sheep=خروف|lion=أسد|head=رأس|face=وجه|eye=عين|ear=أذن|nose=أنف|mouth=فم|hand=يد|finger=إصبع|leg=ساق|foot=قدم|heart=قلب|body=جسم|hair=شعر|tooth=سن|zero=صفر|one=واحد|two=اثنان|three=ثلاثة|four=أربعة|five=خمسة|six=ستة|seven=سبعة|eight=ثمانية|nine=تسعة|ten=عشرة|hundred=مئة|thousand=ألف|first=أول|last=أخير|half=نصف|red=أحمر|blue=أزرق|green=أخضر|yellow=أصفر|black=أسود|white=أبيض|brown=بني|gray=رمادي|pink=وردي|color=لون|big=كبير|small=صغير|long=طويل|short=قصير|tall=طويل القامة|new=جديد|old=قديم|young=شاب|good=جيد|bad=سيئ|beautiful=جميل|ugly=قبيح|happy=سعيد|sad=حزين|angry=غاضب|tired=متعب|sick=مريض|healthy=صحي|strong=قوي|weak=ضعيف|fast=سريع|slow=بطيء|easy=سهل|difficult=صعب|important=مهم|expensive=غالي|cheap=رخيص|clean=نظيف|dirty=متسخ|full=ممتلئ|empty=فارغ|open=مفتوح|close=يغلق|near=قريب|far=بعيد|right=يمين|left=يسار|heavy=ثقيل|light=خفيف|rich=غني|poor=فقير|free=مجاني|safe=آمن|quiet=هادئ|loud=صاخب|busy=مشغول|ready=جاهز|late=متأخر|early=مبكر|different=مختلف|same=نفس|other=آخر|many=كثير|few=قليل|all=كل|some=بعض|more=أكثر|less=أقل|very=جدا|enough=كاف|go=يذهب|come=يأتي|sleep=ينام|wake=يستيقظ|walk=يمشي|run=يركض|sit=يجلس|stand=يقف|read=يقرأ|write=يكتب|speak=يتكلم|say=يقول|tell=يخبر|ask=يسأل|answer=يجيب|listen=يستمع|hear=يسمع|see=يرى|look=ينظر|watch=يشاهد|know=يعرف|think=يفكر|understand=يفهم|learn=يتعلم|teach=يعلّم|study=يدرس|work=يعمل|play=يلعب|buy=يشتري|sell=يبيع|pay=يدفع|give=يعطي|take=يأخذ|bring=يحضر|send=يرسل|receive=يستلم|make=يصنع|do=يفعل|want=يريد|need=يحتاج|like=يحب|love=يعشق|hate=يكره|help=يساعد|try=يحاول|start=يبدأ|stop=يتوقف|finish=ينهي|wait=ينتظر|find=يجد|lose=يفقد|keep=يحتفظ|put=يضع|carry=يحمل|wear=يرتدي|wash=يغسل|build=يبني|break=يكسر|fix=يصلح|cut=يقطع|draw=يرسم|sing=يغني|dance=يرقص|travel=يسافر|visit=يزور|meet=يقابل|live=يعيش|die=يموت|remember=يتذكر|forget=ينسى|believe=يؤمن|hope=يأمل|feel=يشعر|smile=يبتسم|laugh=يضحك|cry=يبكي|fall=يسقط|climb=يتسلق|swim=يسبح|fly=يطير|drive=يقود|ride=يركب|change=يغير|choose=يختار|decide=يقرر|agree=يوافق|call=يتصل|enter=يدخل|leave=يغادر|return=يعود|arrive=يصل|pray=يصلي|wish=يتمنى|share=يشارك|save=يوفر|win=يفوز|grow=ينمو|pull=يسحب|happen=يحدث|become=يصبح|show=يظهر|move=يتحرك|follow=يتبع|join=ينضم|add=يضيف|count=يعد|throw=يرمي|catch=يمسك|what=ماذا|who=من|where=أين|when=متى|why=لماذا|how=كيف|which=أي|here=هنا|there=هناك|this=هذا|that=ذلك|and=و|or=أو|but=لكن|because=لأن|with=مع|without=بدون|under=تحت|behind=خلف|between=بين|before=قبل|after=بعد|again=مرة أخرى|also=أيضا|only=فقط|already=بالفعل|together=معا|alone=وحيد|life=حياة|death=موت|peace=سلام|war=حرب|health=صحة|job=وظيفة|problem=مشكلة|question=سؤال|idea=فكرة|dream=حلم|name=اسم|word=كلمة|language=لغة|number=رقم|story=قصة|news=أخبار|truth=حقيقة|reason=سبب|example=مثال|way=طريقة|place=مكان|thing=شيء|part=جزء|side=جانب|end=نهاية|beginning=بداية|world=عالم|science=علم|art=فن|history=تاريخ|religion=دين|god=الله|power=قوة|luck=حظ|fear=خوف|joy=فرح|pain=ألم|trip=رحلة|holiday=إجازة|birthday=عيد ميلاد|party=حفلة|meeting=اجتماع|lesson=درس|exam=امتحان|test=اختبار|secret=سر|email=بريد إلكتروني|video=فيديو";
   const normAr = (s) => String(s).replace(/[\u064B-\u065F\u0670\u0640]/g, "").replace(/[إأآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
   const EN2AR = {}, AR2EN = {};
   for (const p of DICT_RAW.split("|")) {
@@ -448,10 +410,10 @@ textarea::placeholder { color: var(--muted); }
     const t = text.trim().replace(/[.!?؟،,]+$/g, "").replace(/\s+/g, " ");
     if (dir === "en-ar") {
       const en = t.toLowerCase(), ar = EN2AR[en];
-      if (ar) return { translation: ar.split("،").join("، "), words: [{ en, ar: ar.split("،")[0] }], examples: [], note: "من القاموس المدمج (يشتغل بدون إنترنت)" };
+      if (ar) return { translation: ar.split("،").join("، "), words: [{ en, ar: ar.split("،")[0] }], examples: [], note: "من القاموس المدمج (بدون إنترنت)" };
     } else {
       const en = AR2EN[normAr(t)];
-      if (en) return { translation: en, words: [{ en, ar: EN2AR[en].split("،")[0] }], examples: [], note: "من القاموس المدمج (يشتغل بدون إنترنت)" };
+      if (en) return { translation: en, words: [{ en, ar: EN2AR[en].split("،")[0] }], examples: [], note: "من القاموس المدمج (بدون إنترنت)" };
     }
     return null;
   }
@@ -474,11 +436,11 @@ textarea::placeholder { color: var(--muted); }
       h("div", { class: "row", style: "justify-content:center" }, h("button", { class: "btn primary", onclick: use }, "استخدم ترجمتي")));
   }
 
-  function updNet() { $("netState").textContent = navigator.onLine === false ? "● بدون إنترنت: القاموس المدمج وترجماتك السابقة شغالة" : ""; }
+  function updNet() { $("netState").textContent = navigator.onLine === false ? "● بدون إنترنت" : ""; }
   addEventListener("online", updNet);
   addEventListener("offline", updNet);
 
-  /* ---------- on-device translation model: full offline translation after a one-time download ---------- */
+  /* ---------- on-device model ---------- */
   const MODEL_LIB = "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
   const MODELS = { "en-ar": "Xenova/opus-mt-en-ar", "ar-en": "Xenova/opus-mt-ar-en" };
   const MKEY = "tarjuman:model:v1";
@@ -528,14 +490,15 @@ textarea::placeholder { color: var(--muted); }
       }
     }
     const examples = toks.length >= 3 ? [{ en: enText.slice(0, 200), ar: dir === "ar-en" ? text : translation }] : [];
-    return { translation, words, examples, note: "ترجمة النموذج اللي على جهازك (بدون إنترنت)" };
+    return { translation, words, examples, note: "من النموذج على جهازك (بدون إنترنت)" };
   }
 
   const dlBtn = $("dlBtn"), dlState = $("dlState");
   function refreshModelUI() {
     const both = modelReady["en-ar"] && modelReady["ar-en"];
-    dlState.textContent = both ? "✓ النموذج جاهز على جهازك: الترجمة تشتغل بدون إنترنت."
-      : (modelReady["en-ar"] || modelReady["ar-en"]) ? "نزّلت اتجاه واحد بس. اضغط عشان تكمل." : "ما نزّلت النموذج بعد.";
+    dlState.textContent = both ? "✓ النموذج جاهز — الترجمة تشتغل بدون إنترنت"
+      : (modelReady["en-ar"] || modelReady["ar-en"]) ? "نزّلت اتجاه واحد بس، اضغط عشان تكمل."
+      : "ما نزّلت النموذج بعد (مو إلزامي، بس يعطي ترجمة أدق)";
     dlBtn.textContent = both ? "تحقق من النموذج" : "نزّل نموذج الترجمة";
   }
   dlBtn.addEventListener("click", async () => {
@@ -556,13 +519,13 @@ textarea::placeholder { color: var(--muted); }
     dlBtn.disabled = false; refreshModelUI();
   });
   refreshModelUI();
+  refreshCacheUI();
 
+  /* ---------- MAIN TRANSLATE (FIXED PRIORITY) ---------- */
   async function doTranslate(auto) {
     const text = input.value.trim();
     if (!text) { input.focus(); return; }
     const dir = currentDir();
-    const from = dir === "ar-en" ? "Arabic" : "English";
-    const to = dir === "ar-en" ? "English" : "Arabic";
     const my = ++reqSeq;
     if (ctrl) ctrl.abort();
     ctrl = new AbortController();
@@ -571,16 +534,21 @@ textarea::placeholder { color: var(--muted); }
     $("liveState").textContent = "جاري الترجمة…";
     try {
       let data = cacheGet(text, dir), netErr = null;
+
       if (!data) {
-        if (navigator.onLine !== false) {
-          try { data = await freeTranslate(text, dir, signal); cachePut(text, dir, data); }
-          catch (e) { if (isAbort(e)) throw e; netErr = e; }
-        }
-        if (!data) data = dictGet(text, dir);
-        if (!data && modelReady[dir]) {
-          $("liveState").textContent = "جاري الترجمة بالنموذج اللي على جهازك…";
+        // 1) النموذج على الجهاز أولاً (الأدق)
+        if (modelReady[dir]) {
+          $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
           try { data = await modelFallback(text, dir); } catch (e) { data = null; }
         }
+        // 2) الأونلاين (Google ثم MyMemory)
+        if (!data && navigator.onLine !== false) {
+          $("liveState").textContent = "جاري الترجمة أونلاين…";
+          try { data = await onlineTranslate(text, dir, signal); cachePut(text, dir, data); refreshCacheUI(); }
+          catch (e) { if (isAbort(e)) throw e; netErr = e; }
+        }
+        // 3) القاموس المدمج
+        if (!data) data = dictGet(text, dir);
         if (!data && netErr && netErr.message === "quota") throw netErr;
       }
       if (my !== reqSeq) return;
@@ -604,14 +572,13 @@ textarea::placeholder { color: var(--muted); }
       }
 
       const entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: Date.now(), dir, text, translation, words, examples, note: data.note || "" };
-      // nothing is saved yet: the result shows a question asking if you want it in the history
       renderResult(entry);
     } catch (err) {
       if (my !== reqSeq) return;
-      if (err && err.message === "quota") { pauseUntil = Date.now() + 15000; showError("وصلت الحد المجاني للترجمة. انتظر شوي وجرّب مرة ثانية، أو حط إيميلك في الكود (MM_EMAIL) عشان يزيد الحد."); }
-      else if (err && err.code === "not_granted") { denied = true; showError("لازم توافق على صلاحية الترجمة عشان تشتغل. اضغط «ترجم» وجرّب."); }
-      else if (err && err.code === "rate_limited") { pauseUntil = Date.now() + 10000; showError("طلبات كثيرة بسرعة. انتظر شوي واضغط «ترجم»."); }
-      else showError("صار خطأ أثناء الترجمة. تأكد من الإنترنت واضغط «ترجم» وجرّب مرة ثانية.");
+      if (err && err.message === "quota") { pauseUntil = Date.now() + 15000; showError("وصلت الحد المجاني. انتظر شوي وجرّب، أو نزّل النموذج عشان تشتغل بدون قيود."); }
+      else if (err && err.code === "not_granted") { denied = true; showError("لازم توافق على صلاحية الترجمة."); }
+      else if (err && err.code === "rate_limited") { pauseUntil = Date.now() + 10000; showError("طلبات كثيرة بسرعة. انتظر شوي."); }
+      else showError("صار خطأ أثناء الترجمة. تأكد من الإنترنت واضغط «ترجم».");
     } finally {
       if (my === reqSeq) $("liveState").textContent = "";
       goBtn.disabled = false;
@@ -658,12 +625,12 @@ textarea::placeholder { color: var(--muted); }
         h("span", { class: "pa" }, "النص كامل: " + (e.text.length > 60 ? e.text.slice(0, 60) + "…" : e.text) + (textSaved ? "  (محفوظ)" : "")));
     }
     const nothingNew = rows.every((r) => r.saved) && (!showText || textSaved);
-    if (existing && nothingNew) { done("✓ محفوظة في السجل. تقدر تحذف أي كلمة منها من تبويب السجل.", true); return wrap; }
+    if (existing && nothingNew) { done("✓ محفوظة في السجل.", true); return wrap; }
 
     const save = () => {
       const chosen = rows.filter((r) => !r.saved && r.box.checked).map((r) => r.w);
       const wantText = showText ? (!textSaved && textBox.checked) : chosen.length > 0;
-      if (!chosen.length && !wantText) { done("ما اخترت شي، فما انحفظ شي.", false); return; }
+      if (!chosen.length && !wantText) { done("ما اخترت شي.", false); return; }
       if (existing) {
         chosen.forEach((w) => existing.words.push(w));
         if (wantText) existing.noText = false;
@@ -694,19 +661,18 @@ textarea::placeholder { color: var(--muted); }
       setTimeout(() => (copyBtn.textContent = "نسخ"), 1500);
     } }, "نسخ");
     const box = $("resultBox");
+    const noteEl = e.note ? h("p", { class: "hint" }, h("span", { class: "src-tag" }, e.note)) : null;
     box.replaceChildren(
       h("p", { class: "out", dir: outDir }, e.translation),
       h("div", { class: "row" }, copyBtn, speakBtn(enText, "انطق الإنجليزي"), speakBtn(enText, "ببطء", true)),
       savePrompt(e),
-      e.note ? h("p", { class: "hint" }, e.note) : null
+      noteEl
     );
     if (e.words.length) box.append(h("p", { class: "words-title" }, "الكلمات"), wordCards(e.words));
     if (e.examples && e.examples.length) box.append(h("p", { class: "words-title" }, "أمثلة"), exampleList(e.examples));
   }
 
-  
-/* ---------- vocabulary pool ---------- */
-  // a word answered correctly this many times in a row stops appearing in questions
+  /* ---------- vocabulary pool ---------- */
   const MASTER = 30;
   const streakOf = (w) => ((stats[norm(w.en)] || {}).s) || 0;
   const isMastered = (w) => streakOf(w) >= MASTER;
@@ -718,7 +684,7 @@ textarea::placeholder { color: var(--muted); }
     return includeMastered ? all : all.filter((w) => !isMastered(w));
   }
 
-  /* ---------- quiz (many question types) ---------- */
+  /* ---------- quiz ---------- */
   let quiz = null;
   const TRUE_ = "صح", FALSE_ = "غلط";
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -730,7 +696,6 @@ textarea::placeholder { color: var(--muted); }
     for (const e of history) for (const x of (e.examples || [])) if (re.test(x.en)) hits.push(x);
     return hits.length ? hits[Math.floor(Math.random() * hits.length)] : null;
   }
-
   function distract(w, all, key, n) {
     const out = [];
     for (const o of shuffle(all)) {
@@ -741,7 +706,6 @@ textarea::placeholder { color: var(--muted); }
     }
     return out;
   }
-
   function typesFor(w, all) {
     if (all.length < 4) return ["flip", "type"];
     const t = ["mc_ar", "mc_ar", "mc_en", "tf", "type"];
@@ -749,16 +713,13 @@ textarea::placeholder { color: var(--muted); }
     if (exampleFor(w)) t.push("fill", "fill", "fill");
     return t;
   }
-
   function buildQ(w, all) {
     const types = typesFor(w, all);
     const type = types[Math.floor(Math.random() * types.length)];
     const q = { w, type };
-    if (type === "mc_ar" || type === "listen") {
-      q.answer = w.ar; q.options = shuffle([w.ar, ...distract(w, all, "ar", 3)]);
-    } else if (type === "mc_en") {
-      q.answer = w.en; q.options = shuffle([w.en, ...distract(w, all, "en", 3)]);
-    } else if (type === "fill") {
+    if (type === "mc_ar" || type === "listen") { q.answer = w.ar; q.options = shuffle([w.ar, ...distract(w, all, "ar", 3)]); }
+    else if (type === "mc_en") { q.answer = w.en; q.options = shuffle([w.en, ...distract(w, all, "en", 3)]); }
+    else if (type === "fill") {
       const x = exampleFor(w);
       q.ex = x;
       q.blanked = x.en.replace(new RegExp("\\b" + esc(w.en) + "\\b", "i"), "_____");
@@ -769,23 +730,18 @@ textarea::placeholder { color: var(--muted); }
       q.shownAr = truth ? w.ar : other;
       q.answer = truth ? TRUE_ : FALSE_;
       q.options = [TRUE_, FALSE_];
-    } else {
-      q.answer = type === "type" ? w.en : w.ar;
-    }
+    } else { q.answer = type === "type" ? w.en : w.ar; }
     return q;
   }
-
   function startRound(scopeId) {
     const words = pool(scopeId);
     const all = pool(null, true);
     if (!words.length) { quiz = null; renderQuiz(); return; }
-    // fully random: every saved word (old or new) has the same chance of being picked
     const ranked = shuffle(words).slice(0, 10);
     const qs = shuffle(ranked).map((w) => buildQ(w, all));
     quiz = { qs, i: 0, score: 0, missed: [], answered: false, scopeId, picked: null, flipped: false, typed: "", lastOk: false, lastMastered: false };
     renderQuiz();
   }
-
   function record(word, ok) {
     const k = norm(word.en);
     const s = stats[k] || { r: 0, w: 0, s: 0 };
@@ -794,7 +750,6 @@ textarea::placeholder { color: var(--muted); }
     quiz.lastMastered = ok && s.s >= MASTER;
     if (!ok) quiz.missed.push(word); else quiz.score++;
   }
-
   function finish(ok, picked) {
     if (!quiz || quiz.answered) return;
     quiz.answered = true; quiz.lastOk = ok; quiz.picked = picked == null ? null : picked;
@@ -806,10 +761,7 @@ textarea::placeholder { color: var(--muted); }
     const opts = h("div", { class: "opts" });
     q.options.forEach((o) => {
       const b = h("button", { class: "opt", type: "button", dir: ltr ? "ltr" : null, disabled: quiz.answered, onclick: () => finish(squash(o) === squash(q.answer), o) }, o);
-      if (quiz.answered) {
-        if (squash(o) === squash(q.answer)) b.classList.add("right");
-        else if (quiz.picked === o) b.classList.add("wrong");
-      }
+      if (quiz.answered) { if (squash(o) === squash(q.answer)) b.classList.add("right"); else if (quiz.picked === o) b.classList.add("wrong"); }
       opts.append(b);
     });
     return opts;
@@ -819,25 +771,11 @@ textarea::placeholder { color: var(--muted); }
     const w = q.w;
     const label = (t) => h("p", { class: "q-label" }, t);
     switch (q.type) {
-      case "mc_ar":
-        card.append(label("ويش معنى هذي الكلمة بالعربي؟"), h("div", { class: "q-word", dir: "ltr" }, w.en),
-          h("div", { class: "speak-row" }, speakBtn(w.en, "استمع للنطق")), optionsBlock(q, false));
-        break;
-      case "mc_en":
-        card.append(label("ويش الكلمة بالإنجليزي لهذا المعنى؟"), h("div", { class: "q-word rtl" }, w.ar), optionsBlock(q, true));
-        break;
-      case "listen":
-        card.append(label("استمع للكلمة… ويش معناها بالعربي؟"),
-          h("div", { class: "listen-row" }, speakBtn(w.en, "استمع"), speakBtn(w.en, "ببطء", true)), optionsBlock(q, false));
-        break;
-      case "tf":
-        card.append(label("الكلمة ومعناها… صح ولا غلط؟"), h("div", { class: "q-word", dir: "ltr" }, w.en),
-          h("div", { class: "q-sub" }, "= " + q.shownAr), optionsBlock(q, false));
-        break;
-      case "fill":
-        card.append(label("اختر الكلمة الناقصة في الجملة"), h("div", { class: "q-sent", dir: "ltr" }, q.blanked),
-          h("p", { class: "hint center", style: "margin:0 0 16px" }, q.ex.ar), optionsBlock(q, true));
-        break;
+      case "mc_ar": card.append(label("ويش معنى هذي الكلمة بالعربي؟"), h("div", { class: "q-word", dir: "ltr" }, w.en), h("div", { class: "speak-row" }, speakBtn(w.en, "استمع للنطق")), optionsBlock(q, false)); break;
+      case "mc_en": card.append(label("ويش الكلمة بالإنجليزي لهذا المعنى؟"), h("div", { class: "q-word rtl" }, w.ar), optionsBlock(q, true)); break;
+      case "listen": card.append(label("استمع للكلمة… ويش معناها بالعربي؟"), h("div", { class: "listen-row" }, speakBtn(w.en, "استمع"), speakBtn(w.en, "ببطء", true)), optionsBlock(q, false)); break;
+      case "tf": card.append(label("الكلمة ومعناها… صح ولا غلط؟"), h("div", { class: "q-word", dir: "ltr" }, w.en), h("div", { class: "q-sub" }, "= " + q.shownAr), optionsBlock(q, false)); break;
+      case "fill": card.append(label("اختر الكلمة الناقصة في الجملة"), h("div", { class: "q-sent", dir: "ltr" }, q.blanked), h("p", { class: "hint center", style: "margin:0 0 16px" }, q.ex.ar), optionsBlock(q, true)); break;
       case "type": {
         const inp = h("input", { type: "text", class: "type-in" + (quiz.answered ? (quiz.lastOk ? " right" : " wrong") : ""), dir: "ltr",
           autocomplete: "off", autocapitalize: "off", spellcheck: "false", placeholder: "اكتب هنا…", disabled: quiz.answered,
@@ -848,15 +786,14 @@ textarea::placeholder { color: var(--muted); }
         if (!quiz.answered) card.append(h("div", { class: "row", style: "justify-content:center" }, h("button", { class: "btn primary", onclick: submit }, "تحقق")));
         break;
       }
-      default: // flip card
-        card.append(label("ويش معنى هذي الكلمة بالعربي؟"), h("div", { class: "q-word", dir: "ltr" }, w.en),
-          h("div", { class: "speak-row" }, speakBtn(w.en, "استمع للنطق")),
+      default:
+        card.append(label("ويش معنى هذي الكلمة بالعربي؟"), h("div", { class: "q-word", dir: "ltr" }, w.en), h("div", { class: "speak-row" }, speakBtn(w.en, "استمع للنطق")),
           h("div", { class: "reveal" + (quiz.flipped ? "" : " hidden") }, quiz.flipped ? w.ar : "فكّر بالمعنى، وبعدين اضغط «اعرض المعنى»"));
         if (!quiz.flipped) card.append(h("div", { class: "center" }, h("button", { class: "btn primary", onclick: () => { quiz.flipped = true; renderQuiz(); } }, "اعرض المعنى")));
         else if (!quiz.answered) card.append(h("div", { class: "row", style: "justify-content:center" },
           h("button", { class: "btn", onclick: () => finish(true) }, "كنت أعرفها"),
           h("button", { class: "btn", onclick: () => finish(false) }, "ما كنت أعرفها")));
-        if (!quiz.answered) card.append(h("p", { class: "hint center" }, "لما تترجم 4 كلمات مختلفة أو أكثر، تظهر لك أنواع أسئلة ثانية: اختيار، استماع، جمل ناقصة، وصح أو غلط."));
+        if (!quiz.answered) card.append(h("p", { class: "hint center" }, "لما تترجم 4 كلمات مختلفة أو أكثر، تظهر أنواع أسئلة أخرى."));
     }
   }
 
@@ -866,7 +803,7 @@ textarea::placeholder { color: var(--muted); }
       const hasMastered = pool(null, true).length > 0;
       box.replaceChildren(h("div", { class: "card empty" },
         h("b", null, hasMastered ? "ما بقى كلمات للأسئلة 🎉" : "ما عندك كلمات للاختبار بعد"),
-        hasMastered ? "كل الكلمات هنا صارت متقنها. ترجم جمل جديدة، أو رجّع الكلمات المتقنة من تحت." : "ترجم كلمة أو جملة بالإنجليزي، والكلمات المهمة فيها تنحفظ هنا وأسألك عنها."));
+        hasMastered ? "كل الكلمات هنا صارت متقنة. ترجم جمل جديدة، أو رجّع الكلمات المتقنة من تحت." : "ترجم كلمة أو جملة بالإنجليزي، والكلمات المهمة فيها تنحفظ هنا وأسألك عنها."));
       return;
     }
     if (quiz.i >= quiz.qs.length) { renderDone(box); return; }
@@ -882,7 +819,7 @@ textarea::placeholder { color: var(--muted); }
     if (quiz.answered) {
       const ok = quiz.lastOk;
       const okMsg = quiz.lastMastered
-        ? "صح! 🎉 جاوبتها " + MASTER + " مرة ورا بعض. تثبّتت وما بسألك عنها مرة ثانية."
+        ? "صح! 🎉 جاوبتها " + MASTER + " مرة ورا بعض. تثبّتت."
         : "صح! 👏 (" + streakOf(w) + " من " + MASTER + " ورا بعض)";
       const wrongMsg = q.type === "tf" ? "غلط. الصحيح: " + w.en + " = " + w.ar : "غلط. الجواب الصحيح: " + (q.answer || w.ar);
       card.append(h("div", { class: "feedback " + (ok ? "good" : "bad") }, ok ? okMsg : wrongMsg));
@@ -901,19 +838,15 @@ textarea::placeholder { color: var(--muted); }
     const card = h("div", { class: "card quiz" },
       h("h2", { class: "center" }, "خلصت الجولة"),
       h("div", { class: "score" }, quiz.score + " / " + total),
-      h("p", { class: "center hint" }, quiz.score === total ? "ممتاز! عرفت كل الكلمات." : "راجع الكلمات اللي غلطت فيها، وأعد الجولة.")
-    );
-    if (quiz.missed.length) {
-      card.append(h("div", { class: "missed" }, h("p", { class: "words-title" }, "كلمات تحتاج مراجعة"), wordCards(quiz.missed)));
-    }
+      h("p", { class: "center hint" }, quiz.score === total ? "ممتاز! عرفت كل الكلمات." : "راجع الكلمات اللي غلطت فيها وأعد الجولة."));
+    if (quiz.missed.length) card.append(h("div", { class: "missed" }, h("p", { class: "words-title" }, "كلمات تحتاج مراجعة"), wordCards(quiz.missed)));
     card.append(h("div", { class: "row", style: "justify-content:center" },
       h("button", { class: "btn primary", onclick: () => startRound(scope) }, "جولة جديدة"),
       scope ? h("button", { class: "btn", onclick: () => startRound(null) }, "اختبار من كل الكلمات") : null));
     box.replaceChildren(card);
   }
 
-  
-/* ---------- history list ---------- */
+  /* ---------- history list ---------- */
   function removeWord(e, w) {
     e.words = e.words.filter((x) => x !== w);
     if (!e.words.length && e.noText) history = history.filter((x) => x.id !== e.id);
@@ -938,17 +871,14 @@ textarea::placeholder { color: var(--muted); }
       const fromDir = e.dir === "ar-en" ? "rtl" : "ltr", toDir = e.dir === "ar-en" ? "ltr" : "rtl";
       const d = new Date(e.ts);
       return h("article", { class: "card entry" },
-        e.noText ? null : h("div", { class: "tx" },
-          h("div", { class: "a", dir: fromDir }, e.text),
-          h("div", { class: "b", dir: toDir }, e.translation)),
+        e.noText ? null : h("div", { class: "tx" }, h("div", { class: "a", dir: fromDir }, e.text), h("div", { class: "b", dir: toDir }, e.translation)),
         e.words.length ? wordCards(e.words, (w) => removeWord(e, w)) : h("p", { class: "hint" }, "ما فيه كلمات محفوظة لهذي الترجمة."),
         e.examples && e.examples.length ? h("details", { class: "ex-det" }, h("summary", null, "أمثلة (" + e.examples.length + ")"), exampleList(e.examples)) : null,
         h("div", { class: "tools" },
           e.noText ? null : speakBtn(e.dir === "ar-en" ? e.translation : e.text, "انطق"),
           e.words.length ? h("button", { class: "btn small primary", onclick: () => { startRound(e.id); window.scrollTo({ top: 0, behavior: "smooth" }); } }, "اختبرني على هذي") : null,
           h("button", { class: "btn small danger", onclick: () => { history = history.filter((x) => x.id !== e.id); saveHistory(); updateCount(); renderList(); startRound(null); } }, "حذف"),
-          h("time", { datetime: d.toISOString() }, d.toLocaleDateString("ar", { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }))
-        ));
+          h("time", { datetime: d.toISOString() }, d.toLocaleDateString("ar", { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" }))));
     }));
   }
 
@@ -957,7 +887,7 @@ textarea::placeholder { color: var(--muted); }
     history = []; stats = {}; saveHistory(); saveStats(); updateCount(); renderList(); startRound(null);
   });
 
-  /* ---------- backup: export / import ---------- */
+  /* ---------- backup ---------- */
   $("exportBtn").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify({ app: "tarjuman", history: history, stats: stats, exported: Date.now() })], { type: "application/json" });
     const link = document.createElement("a");
@@ -984,7 +914,7 @@ textarea::placeholder { color: var(--muted); }
   });
 
   /* ---------- init ---------- */
-  updateCount(); updateDir(); cloudInit(); updNet();
+  updateCount(); updateDir(); updNet(); refreshModelUI(); refreshCacheUI();
   if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 </script>

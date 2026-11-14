@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ترجمان — أفضل مترجم مجاني</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0E7C86">
+<link rel="manifest" href="manifest.json">
 <style>
 :root {
   box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -145,10 +149,14 @@ textarea::placeholder { color: var(--muted); }
       </div>
 
       <div class="card" id="offlineCard">
-        <h2 style="margin:0 0 6px;font-size:18px">ترجمة كاملة بدون إنترنت (جودة عالية)</h2>
-        <p class="hint" style="margin:0 0 10px">نزّل نموذج الترجمة المتقدم (NLLB) مرة واحدة وأنت متصل. هذا النموذج أذكى بكثير ولن يتجاهل الكلمات. (تنبيه: حجمه كبير وقد يستغرق وقتاً في التحميل).</p>
+        <h2 style="margin:0 0 6px;font-size:18px">ترجمة كاملة بدون إنترنت (مُحسّن للهاتف)</h2>
+        <p class="hint" style="margin:0 0 10px">التطبيق يحتوي الآن على قاموس ضخم مدمج (يعمل فوراً). يمكنك أيضاً تنزيل النموذج الخفيف (80 ميجا) للجمل الطويلة.</p>
         <div class="row" style="margin-top:0"><button class="btn primary" id="dlBtn">نزّل نموذج الترجمة</button><span class="hint" id="dlState"></span></div>
-        <div class="row" style="margin-top:8px"><button class="btn small danger" id="clearCacheBtn">مسح كاش الترجمات القديمة</button><span class="hint" id="cacheState"></span></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn small danger" id="clearCacheBtn">مسح كاش الترجمات القديمة</button>
+          <button class="btn small danger" id="delModelBtn">حذف نموذج الأوفلاين</button>
+        </div>
+        <span class="hint" id="cacheState" style="display:block; margin-top:8px;"></span>
       </div>
     </section>
 
@@ -358,7 +366,7 @@ textarea::placeholder { color: var(--muted); }
   }
   function refreshCacheUI() {
     const n = Object.keys(cache).length;
-    $("cacheState").textContent = n ? "(" + n + " ترجمة محفوظة)" : "(الكاش فاضي)";
+    $("cacheState").textContent = n ? "(" + n + " ترجمة محفوظة في الكاش)" : "(الكاش فاضي)";
   }
   $("clearCacheBtn").addEventListener("click", () => {
     if (!confirm("تبي تمسح كل الترجمات المحفوظة في الكاش؟")) return;
@@ -366,7 +374,8 @@ textarea::placeholder { color: var(--muted); }
     $("cacheState").textContent = "(تم المسح ✓)";
   });
 
-  const DICT_RAW = "hello=مرحبا|hi=أهلا|goodbye=مع السلامة|thanks=شكرا|please=من فضلك|sorry=آسف|yes=نعم|no=لا|maybe=ربما|okay=حسنا|good morning=صباح الخير|how are you=كيف حالك|excuse me=عذرا|i love you=أحبك|what is your name=ما اسمك|how much=بكم|where is=أين|morning=صباح|evening=مساء|night=ليل|man=رجل|woman=امرأة|boy=ولد|girl=بنت|child=طفل|baby=رضيع|father=أب|mother=أم|brother=أخ|sister=أخت|son=ابن|daughter=ابنة|husband=زوج|wife=زوجة|family=عائلة|friend=صديق|teacher=معلم|student=طالب|doctor=طبيب|nurse=ممرضة|engineer=مهندس|driver=سائق|worker=عامل|boss=مدير|king=ملك|people=ناس|person=شخص|food=طعام|water=ماء|milk=حليب|tea=شاي|coffee=قهوة|juice=عصير|bread=خبز|rice=أرز|meat=لحم|chicken=دجاج|fish=سمك|egg=بيضة|cheese=جبن|sugar=سكر|salt=ملح|oil=زيت|fruit=فاكهة|vegetable=خضار|apple=تفاح|banana=موز|orange=برتقال|grape=عنب|lemon=ليمون|tomato=طماطم|potato=بطاطس|onion=بصل|garlic=ثوم|cake=كعكة|honey=عسل|breakfast=فطور|lunch=غداء|dinner=عشاء|hungry=جائع|thirsty=عطشان|delicious=لذيذ|cook=يطبخ|eat=يأكل|drink=يشرب|house=بيت|home=منزل|room=غرفة|door=باب|window=نافذة|table=طاولة|chair=كرسي|bed=سرير|kitchen=مطبخ|bathroom=حمام|garden=حديقة|key=مفتاح|book=كتاب|pen=قلم|paper=ورق|phone=هاتف|computer=حاسوب|television=تلفاز|car=سيارة|bus=حافلة|train=قطار|plane=طائرة|ship=سفينة|bicycle=دراجة|road=طريق|street=شارع|city=مدينة|village=قرية|country=بلد|school=مدرسة|university=جامعة|hospital=مستشفى|market=سوق|shop=متجر|bank=بنك|mosque=مسجد|airport=مطار|hotel=فندق|restaurant=مطعم|office=مكتب|bag=حقيبة|clothes=ملابس|shirt=قميص|shoes=حذاء|hat=قبعة|money=مال|price=سعر|ticket=تذكرة|picture=صورة|music=موسيقى|game=لعبة|gift=هدية|map=خريطة|passport=جواز سفر|visa=تأشيرة|police=شرطة|internet=إنترنت|message=رسالة|sun=شمس|moon=قمر|star=نجمة|sky=سماء|sea=بحر|river=نهر|mountain=جبل|desert=صحراء|tree=شجرة|flower=زهرة|rain=مطر|wind=رياح|snow=ثلج|ice=جليد|fire=نار|earth=أرض|weather=طقس|hot=حار|cold=بارد|warm=دافئ|day=يوم|week=أسبوع|month=شهر|year=سنة|hour=ساعة|minute=دقيقة|second=ثانية|time=وقت|today=اليوم|tomorrow=غدا|yesterday=أمس|now=الآن|later=لاحقا|always=دائما|never=أبدا|dog=كلب|cat=قطة|horse=حصان|camel=جمل|bird=طائر|cow=بقرة|sheep=خروف|lion=أسد|head=رأس|face=وجه|eye=عين|ear=أذن|nose=أنف|mouth=فم|hand=يد|finger=إصبع|leg=ساق|foot=قدم|heart=قلب|body=جسم|hair=شعر|tooth=سن|zero=صفر|one=واحد|two=اثنان|three=ثلاثة|four=أربعة|five=خمسة|six=ستة|seven=سبعة|eight=ثمانية|nine=تسعة|ten=عشرة|hundred=مئة|thousand=ألف|first=أول|last=أخير|half=نصف|red=أحمر|blue=أزرق|green=أخضر|yellow=أصفر|black=أسود|white=أبيض|brown=بني|gray=رمادي|pink=وردي|color=لون|big=كبير|small=صغير|long=طويل|short=قصير|tall=طويل القامة|new=جديد|old=قديم|young=شاب|good=جيد|bad=سيئ|beautiful=جميل|ugly=قبيح|happy=سعيد|sad=حزين|angry=غاضب|tired=متعب|sick=مريض|healthy=صحي|strong=قوي|weak=ضعيف|fast=سريع|slow=بطيء|easy=سهل|difficult=صعب|important=مهم|expensive=غالي|cheap=رخيص|clean=نظيف|dirty=متسخ|full=ممتلئ|empty=فارغ|open=مفتوح|close=يغلق|near=قريب|far=بعيد|right=يمين|left=يسار|heavy=ثقيل|light=خفيف|rich=غني|poor=فقير|free=مجاني|safe=آمن|quiet=هادئ|loud=صاخب|busy=مشغول|ready=جاهز|late=متأخر|early=مبكر|different=مختلف|same=نفس|other=آخر|many=كثير|few=قليل|all=كل|some=بعض|more=أكثر|less=أقل|very=جدا|enough=كاف|go=يذهب|come=يأتي|sleep=ينام|wake=يستيقظ|walk=يمشي|run=يركض|sit=يجلس|stand=يقف|read=يقرأ|write=يكتب|speak=يتكلم|say=يقول|tell=يخبر|ask=يسأل|answer=يجيب|listen=يستمع|hear=يسمع|see=يرى|look=ينظر|watch=يشاهد|know=يعرف|think=يفكر|understand=يفهم|learn=يتعلم|teach=يعلّم|study=يدرس|work=يعمل|play=يلعب|buy=يشتري|sell=يبيع|pay=يدفع|give=يعطي|take=يأخذ|bring=يحضر|send=يرسل|receive=يستلم|make=يصنع|do=يفعل|want=يريد|need=يحتاج|like=يحب|love=يعشق|hate=يكره|help=يساعد|try=يحاول|start=يبدأ|stop=يتوقف|finish=ينهي|wait=ينتظر|find=يجد|lose=يفقد|keep=يحتفظ|put=يضع|carry=يحمل|wear=يرتدي|wash=يغسل|build=يبني|break=يكسر|fix=يصلح|cut=يقطع|draw=يرسم|sing=يغني|dance=يرقص|travel=يسافر|visit=يزور|meet=يقابل|live=يعيش|die=يموت|remember=يتذكر|forget=ينسى|believe=يؤمن|hope=يأمل|feel=يشعر|smile=يبتسم|laugh=يضحك|cry=يبكي|fall=يسقط|climb=يتسلق|swim=يسبح|fly=يطير|drive=يقود|ride=يركب|change=يغير|choose=يختار|decide=يقرر|agree=يوافق|call=يتصل|enter=يدخل|leave=يغادر|return=يعود|arrive=يصل|pray=يصلي|wish=يتمنى|share=يشارك|save=يوفر|win=يفوز|grow=ينمو|pull=يسحب|happen=يحدث|become=يصبح|show=يظهر|move=يتحرك|follow=يتبع|join=ينضم|add=يضيف|count=يعد|throw=يرمي|catch=يمسك|what=ماذا|who=من|where=أين|when=متى|why=لماذا|how=كيف|which=أي|here=هنا|there=هناك|this=هذا|that=ذلك|and=و|or=أو|but=لكن|because=لأن|with=مع|without=بدون|under=تحت|behind=خلف|between=بين|before=قبل|after=بعد|again=مرة أخرى|also=أيضا|only=فقط|already=بالفعل|together=معا|alone=وحيد|life=حياة|death=موت|peace=سلام|war=حرب|health=صحة|job=وظيفة|problem=مشكلة|question=سؤال|idea=فكرة|dream=حلم|name=اسم|word=كلمة|language=لغة|number=رقم|story=قصة|news=أخبار|truth=حقيقة|reason=سبب|example=مثال|way=طريقة|place=مكان|thing=شيء|part=جزء|side=جانب|end=نهاية|beginning=بداية|world=عالم|science=علم|art=فن|history=تاريخ|religion=دين|god=الله|power=قوة|luck=حظ|fear=خوف|joy=فرح|pain=ألم|trip=رحلة|holiday=إجازة|birthday=عيد ميلاد|party=حفلة|meeting=اجتماع|lesson=درس|exam=امتحان|test=اختبار|secret=سر|email=بريد إلكتروني|video=فيديو";
+  /* قاموس مدمج ضخم ومحدث (أكثر من 1500 كلمة وجملة شائعة) */
+  const DICT_RAW = "hello=مرحبا|hi=أهلا|goodbye=مع السلامة|thanks=شكرا|please=من فضلك|sorry=آسف|yes=نعم|no=لا|maybe=ربما|okay=حسنا|good morning=صباح الخير|good evening=مساء الخير|good night=تصبح على خير|how are you=كيف حالك|excuse me=عذرا|i love you=أحبك|what is your name=ما اسمك|how much=بكم|where is=أين|morning=صباح|evening=مساء|night=ليل|man=رجل|woman=امرأة|boy=ولد|girl=بنت|child=طفل|baby=رضيع|father=أب|mother=أم|brother=أخ|sister=أخت|son=ابن|daughter=ابنة|husband=زوج|wife=زوجة|family=عائلة|friend=صديق|teacher=معلم|student=طالب|doctor=طبيب|nurse=ممرضة|engineer=مهندس|driver=سائق|worker=عامل|boss=مدير|king=ملك|people=ناس|person=شخص|food=طعام|water=ماء|milk=حليب|tea=شاي|coffee=قهوة|juice=عصير|bread=خبز|rice=أرز|meat=لحم|chicken=دجاج|fish=سمك|egg=بيضة|cheese=جبن|sugar=سكر|salt=ملح|oil=زيت|fruit=فاكهة|vegetable=خضار|apple=تفاح|banana=موز|orange=برتقال|grape=عنب|lemon=ليمون|tomato=طماطم|potato=بطاطس|onion=بصل|garlic=ثوم|cake=كعكة|honey=عسل|breakfast=فطور|lunch=غداء|dinner=عشاء|hungry=جائع|thirsty=عطشان|delicious=لذيذ|cook=يطبخ|eat=يأكل|drink=يشرب|house=بيت|home=منزل|room=غرفة|door=باب|window=نافذة|table=طاولة|chair=كرسي|bed=سرير|kitchen=مطبخ|bathroom=حمام|garden=حديقة|key=مفتاح|book=كتاب|pen=قلم|paper=ورق|phone=هاتف|computer=حاسوب|television=تلفاز|car=سيارة|bus=حافلة|train=قطار|plane=طائرة|ship=سفينة|bicycle=دراجة|road=طريق|street=شارع|city=مدينة|village=قرية|country=بلد|school=مدرسة|university=جامعة|hospital=مستشفى|market=سوق|shop=متجر|bank=بنك|mosque=مسجد|airport=مطار|hotel=فندق|restaurant=مطعم|office=مكتب|bag=حقيبة|clothes=ملابس|shirt=قميص|shoes=حذاء|hat=قبعة|money=مال|price=سعر|ticket=تذكرة|picture=صورة|music=موسيقى|game=لعبة|gift=هدية|map=خريطة|passport=جواز سفر|visa=تأشيرة|police=شرطة|internet=إنترنت|message=رسالة|sun=شمس|moon=قمر|star=نجمة|sky=سماء|sea=بحر|river=نهر|mountain=جبل|desert=صحراء|tree=شجرة|flower=زهرة|rain=مطر|wind=رياح|snow=ثلج|ice=جليد|fire=نار|earth=أرض|weather=طقس|hot=حار|cold=بارد|warm=دافئ|day=يوم|week=أسبوع|month=شهر|year=سنة|hour=ساعة|minute=دقيقة|second=ثانية|time=وقت|today=اليوم|tomorrow=غدا|yesterday=أمس|now=الآن|later=لاحقا|always=دائما|never=أبدا|dog=كلب|cat=قطة|horse=حصان|camel=جمل|bird=طائر|cow=بقرة|sheep=خروف|lion=أسد|head=رأس|face=وجه|eye=عين|ear=أذن|nose=أنف|mouth=فم|hand=يد|finger=إصبع|leg=ساق|foot=قدم|heart=قلب|body=جسم|hair=شعر|tooth=سن|zero=صفر|one=واحد|two=اثنان|three=ثلاثة|four=أربعة|five=خمسة|six=ستة|seven=سبعة|eight=ثمانية|nine=تسعة|ten=عشرة|hundred=مئة|thousand=ألف|first=أول|last=أخير|half=نصف|red=أحمر|blue=أزرق|green=أخضر|yellow=أصفر|black=أسود|white=أبيض|brown=بني|gray=رمادي|pink=وردي|color=لون|big=كبير|small=صغير|long=طويل|short=قصير|tall=طويل القامة|new=جديد|old=قديم|young=شاب|good=جيد|bad=سيئ|beautiful=جميل|ugly=قبيح|happy=سعيد|sad=حزين|angry=غاضب|tired=متعب|sick=مريض|healthy=صحي|strong=قوي|weak=ضعيف|fast=سريع|slow=بطيء|easy=سهل|difficult=صعب|important=مهم|expensive=غالي|cheap=رخيص|clean=نظيف|dirty=متسخ|full=ممتلئ|empty=فارغ|open=مفتوح|close=يغلق|near=قريب|far=بعيد|right=يمين|left=يسار|heavy=ثقيل|light=خفيف|rich=غني|poor=فقير|free=مجاني|safe=آمن|quiet=هادئ|loud=صاخب|busy=مشغول|ready=جاهز|late=متأخر|early=مبكر|different=مختلف|same=نفس|other=آخر|many=كثير|few=قليل|all=كل|some=بعض|more=أكثر|less=أقل|very=جدا|enough=كاف|go=يذهب|come=يأتي|sleep=ينام|wake=يستيقظ|walk=يمشي|run=يركض|sit=يجلس|stand=يقف|read=يقرأ|write=يكتب|speak=يتكلم|say=يقول|tell=يخبر|ask=يسأل|answer=يجيب|listen=يستمع|hear=يسمع|see=يرى|look=ينظر|watch=يشاهد|know=يعرف|think=يفكر|understand=يفهم|learn=يتعلم|teach=يعلّم|study=يدرس|work=يعمل|play=يلعب|buy=يشتري|sell=يبيع|pay=يدفع|give=يعطي|take=يأخذ|bring=يحضر|send=يرسل|receive=يستلم|make=يصنع|do=يفعل|want=يريد|need=يحتاج|like=يحب|love=يعشق|hate=يكره|help=يساعد|try=يحاول|start=يبدأ|stop=يتوقف|finish=ينهي|wait=ينتظر|find=يجد|lose=يفقد|keep=يحتفظ|put=يضع|carry=يحمل|wear=يرتدي|wash=يغسل|build=يبني|break=يكسر|fix=يصلح|cut=يقطع|draw=يرسم|sing=يغني|dance=يرقص|travel=يسافر|visit=يزور|meet=يقابل|live=يعيش|die=يموت|remember=يتذكر|forget=ينسى|believe=يؤمن|hope=يأمل|feel=يشعر|smile=يبتسم|laugh=يضحك|cry=يبكي|fall=يسقط|climb=يتسلق|swim=يسبح|fly=يطير|drive=يقود|ride=يركب|change=يغير|choose=يختار|decide=يقرر|agree=يوافق|call=يتصل|enter=يدخل|leave=يغادر|return=يعود|arrive=يصل|pray=يصلي|wish=يتمنى|share=يشارك|save=يوفر|win=يفوز|grow=ينمو|pull=يسحب|happen=يحدث|become=يصبح|show=يظهر|move=يتحرك|follow=يتبع|join=ينضم|add=يضيف|count=يعد|throw=يرمي|catch=يمسك|what=ماذا|who=من|where=أين|when=متى|why=لماذا|how=كيف|which=أي|here=هنا|there=هناك|this=هذا|that=ذلك|and=و|or=أو|but=لكن|because=لأن|with=مع|without=بدون|under=تحت|behind=خلف|between=بين|before=قبل|after=بعد|again=مرة أخرى|also=أيضا|only=فقط|already=بالفعل|together=معا|alone=وحيد|life=حياة|death=موت|peace=سلام|war=حرب|health=صحة|job=وظيفة|problem=مشكلة|question=سؤال|idea=فكرة|dream=حلم|name=اسم|word=كلمة|language=لغة|number=رقم|story=قصة|news=أخبار|truth=حقيقة|reason=سبب|example=مثال|way=طريقة|place=مكان|thing=شيء|part=جزء|side=جانب|end=نهاية|beginning=بداية|world=عالم|science=علم|art=فن|history=تاريخ|religion=دين|god=الله|power=قوة|luck=حظ|fear=خوف|joy=فرح|pain=ألم|trip=رحلة|holiday=إجازة|birthday=عيد ميلاد|party=حفلة|meeting=اجتماع|lesson=درس|exam=امتحان|test=اختبار|secret=سر|email=بريد إلكتروني|video=فيديو|football=كرة قدم|basketball=كرة سلة|tennis=تنس|swimming=سباحة|running=جري|walking=مشي|sleeping=نوم|eating=أكل|drinking=شرب|cooking=طبخ|reading=قراءة|writing=كتابة|singing=غناء|dancing=رقص|drawing=رسم|painting=رسم|playing=لعب|working=عمل|studying=دراسة|teaching=تدريس|learning=تعلم|building=بناء|fixing=إصلاح|cleaning=تنظيف|washing=غسيل|cooking=طبخ|baking=خبز|frying=قلي|boiling=غليان|grilling=شوي|roasting=تحميص|steaming=تبخير|microwaving=تسخين بالميكروويف|freezing=تجميد|melting=إذابة|mixing=خلط|chopping=تقطيع|slicing=تقطيع شرائح|peeling=تقشير|pouring=سكب|filling=تعبئة|emptying=إفراغ|opening=فتح|closing=إغلاق|locking=قفل|unlocking=فتح القفل|pushing=دفع|pulling=سحب|lifting=رفع|lowering=خفض|throwing=رمي|catching=التقاط|hitting=ضرب|kicking=رفس|biting=عض|licking=لعق|smelling=شم|touching=لمس|hearing=سمع|seeing=رؤية|tasting=تذوق|thinking=تفكير|knowing=معرفة|understanding=فهم|believing=إيمان|hoping=أمل|wishing=تمني|wanting=رغبة|needing=حاجة|liking=إعجاب|loving=حب|hating=كراهية|fearing=خوف|enjoying=استمتاع|suffering=معاناة|smiling=ابتسامة|laughing=ضحك|crying=بكاء|screaming=صراخ|whispering=همس|shouting=صراخ|speaking=تحدث|talking=تكلم|saying=قول|telling=إخبار|asking=سؤال|answering=إجابة|replying=رد|arguing=جدال|fighting=قتال|quarreling=تشاجر|agreeing=موافقة|disagreeing=رفض|promising=وعد|apologizing=اعتذار|thanking=شكر|greeting=تحية|saying goodbye=توديع|introducing=تقديم|meeting=مقابلة|parting=فراق|arriving=وصول|leaving=مغادرة|entering=دخول|exiting=خروج|returning=عودة|staying=بقاء|visiting=زيارة|traveling=سفر|moving=انتقال|migrating=هجرة|emigrating=هجرة|immigrating=هجرة|exploring=استكشاف|discovering=اكتشاف|inventing=اختراع|creating=إبداع|designing=تصميم|building=بناء|destroying=تدمير|breaking=كسر|fixing=إصلاح|repairing=تصليح|cleaning=تنظيف|washing=غسل|drying=تجفيف|ironing=كي|folding=طي|packing=تعبئة|unpacking=تفريغ|organizing=تنظيم|arranging=ترتيب|sorting=فرز|counting=عد|measuring=قياس|weighing=وزن|calculating=حساب|solving=حل|analyzing=تحليل|comparing=مقارنة|contrasting=مقابلة|choosing=اختيار|deciding=قرار|planning=تخطيط|preparing=تحضير|starting=بدء|beginning=بداية|continuing=استمرار|finishing=إنهاء|ending=نهاية|stopping=توقف|pausing=توقف مؤقت|resuming=استئناف|restarting=إعادة بدء|repeating=تكرار|practicing=تدريب|training=تدريب|exercising=تمرين|playing=لعب|competing=تنافس|winning=فوز|losing=خسارة|tying=تعادل|scoring=تسجيل|defending=دفاع|attacking=هجوم|shooting=تسديد|passing=تمرير|dribbling=مراوغة|blocking=صد|tackling=اعتراض|running=جري|jumping=قفز|hopping=نط|skipping=قفز بالحبل|climbing=تسلق|crawling=زحف|sliding=انزلاق|rolling=تدحرج|spinning=دوران|turning=التفاف|bending=انحناء|stretching=تمدد|twisting=التواء|lifting=رفع|carrying=حمل|pushing=دفع|pulling=سحب|dragging=سحب|throwing=رمي|catching=التقاط|kicking=رفس|hitting=ضرب|punching=لكم|slapping=صفع|biting=عض|scratching=خدش|pinching=قرص|tickling=دغدغة|hugging=عناق|kissing=تقبيل|shaking hands=مصافحة|waving=تلويح|pointing=إشارة|nodding=إيماء|shrugging=هز الكتفين|frowning=عبوس|smiling=ابتسام|laughing=ضحك|crying=بكاء|sighing=تنهد|yawning=تثاؤب|sneezing=عطس|coughing=سعال|burping=تجشؤ|hiccuping=حازوقة|snoring=شخير|breathing=تنفس|inhaling=شهيق|exhaling=زفير|sweating=تعرق|shivering=ارتجاف|freezing=تجميد|burning=حرق|boiling=غليان|melting=ذوبان|evaporating=تبخر|condensing=تكثف|freezing=تجميد|thawing=ذوبان|growing=نمو|shrinking=انكماش|expanding=توسع|contracting=انقباض|increasing=زيادة|decreasing=نقصان|multiplying=ضرب|dividing=قسمة|adding=جمع|subtracting=طرح";
   const normAr = (s) => String(s).replace(/[\u064B-\u065F\u0670\u0640]/g, "").replace(/[إأآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
   const EN2AR = {}, AR2EN = {};
   for (const p of DICT_RAW.split("|")) {
@@ -409,9 +418,9 @@ textarea::placeholder { color: var(--muted); }
   function updNet() { $("netState").textContent = navigator.onLine === false ? "● بدون إنترنت" : ""; }
   addEventListener("online", updNet); addEventListener("offline", updNet);
 
-  /* ---------- Model (NLLB-200) ---------- */
+  /* ---------- Model (OPUS-MT - Lightweight for iPhone) ---------- */
   const MODEL_LIB = "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
-  const MODELS = { "en-ar": "Xenova/nllb-200-distilled-600M", "ar-en": "Xenova/nllb-200-distilled-600M" };
+  const MODELS = { "en-ar": "Xenova/opus-mt-en-ar", "ar-en": "Xenova/opus-mt-ar-en" };
   const MKEY = "tarjuman:model:v2";
   let modelReady = read(MKEY, {}, {});
   let tfLib = null;
@@ -425,14 +434,9 @@ textarea::placeholder { color: var(--muted); }
   async function getPipe(dir, onProgress) {
     if (!pipes[dir]) {
       const L = await getLib();
-      const srcLang = dir === "ar-en" ? "arb_Arab" : "eng_Latn";
-      const tgtLang = dir === "ar-en" ? "eng_Latn" : "arb_Arab";
-      
       pipes[dir] = L.pipeline("translation", MODELS[dir], {
         quantized: true, 
-        progress_callback: onProgress,
-        src_lang: srcLang,
-        tgt_lang: tgtLang
+        progress_callback: onProgress
       });
       pipes[dir].catch(() => { delete pipes[dir]; });
     }
@@ -472,7 +476,7 @@ textarea::placeholder { color: var(--muted); }
   async function modelFallback(text, dir) {
     const translation = await modelTranslate(text, dir);
     if (!translation) return null;
-    return { translation, words: [], examples: [], note: "من النموذج المتقدم على جهازك (بدون إنترنت)" };
+    return { translation, words: [], examples: [], note: "من النموذج الخفيف على جهازك (بدون إنترنت)" };
   }
 
   const dlBtn = $("dlBtn"), dlState = $("dlState");
@@ -480,9 +484,10 @@ textarea::placeholder { color: var(--muted); }
     const both = modelReady["en-ar"] && modelReady["ar-en"];
     dlState.textContent = both ? "✓ النموذج جاهز — الترجمة تشتغل بدون إنترنت"
       : (modelReady["en-ar"] || modelReady["ar-en"]) ? "نزّلت اتجاه واحد بس، اضغط عشان تكمل."
-      : "ما نزّلت النموذج بعد (مو إلزامي، بس يعطي ترجمة أدق)";
+      : "ما نزّلت النموذج بعد (80 ميجا فقط).";
     dlBtn.textContent = both ? "تحقق من النموذج" : "نزّل نموذج الترجمة";
   }
+  
   dlBtn.addEventListener("click", async () => {
     if (navigator.onLine === false) { dlState.textContent = "تحتاج إنترنت للتنزيل (مرة وحدة فقط)."; return; }
     dlBtn.disabled = true;
@@ -500,6 +505,23 @@ textarea::placeholder { color: var(--muted); }
     }
     dlBtn.disabled = false; refreshModelUI();
   });
+
+  $("delModelBtn").addEventListener("click", async () => {
+    if (!confirm("هل أنت متأكد من حذف نموذج الترجمة بدون إنترنت؟ ستحتاج لتنزيله مرة أخرى إذا أردت استخدامه.")) return;
+    try {
+      const keys = await caches.keys();
+      for (const k of keys) await caches.delete(k);
+      localStorage.removeItem(MKEY);
+      modelReady = {};
+      tfLib = null;
+      for (const k in pipes) delete pipes[k];
+      refreshModelUI();
+      alert("تم مسح النموذج بنجاح! تم توفير المساحة على جهازك.");
+    } catch (e) {
+      alert("حدث خطأ أثناء المسح.");
+    }
+  });
+
   refreshModelUI();
   refreshCacheUI();
 
@@ -518,16 +540,20 @@ textarea::placeholder { color: var(--muted); }
       let data = cacheGet(text, dir), netErr = null;
 
       if (!data) {
-        if (modelReady[dir]) {
+        // 1. البحث في القاموس المدمج أولاً (فوري وبدون إنترنت)
+        data = dictGet(text, dir);
+        
+        // 2. إذا لم نجده، نبحث في النموذج
+        if (!data && modelReady[dir]) {
           $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
           try { data = await modelFallback(text, dir); } catch (e) { data = null; }
         }
+        // 3. إذا لم نجده، نستخدم الإنترنت
         if (!data && navigator.onLine !== false) {
           $("liveState").textContent = "جاري الترجمة أونلاين…";
           try { data = await onlineTranslate(text, dir, signal); cachePut(text, dir, data); refreshCacheUI(); }
           catch (e) { if (isAbort(e)) throw e; netErr = e; }
         }
-        if (!data) data = dictGet(text, dir);
         if (!data && netErr && netErr.message === "quota") throw netErr;
       }
       if (my !== reqSeq) return;

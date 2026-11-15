@@ -289,11 +289,11 @@ textarea::placeholder { color: var(--muted); }
 
   function showError(msg) { $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, msg)); }
 
-  /* ---------- Translation APIs ---------- */
+  /* ---------- Translation APIs (Google فقط) ---------- */
   const STOP = new Set(("a an the and or but if of to in on at by for with from as is am are was were be been being it its this that these those i you he she we they me him her us them my your his our their do does did have has had will would can could should may might not no so than then there here what which who whom when where why how into out up down over under about very just also").split(" "));
   const isAbort = (e) => e && e.name === "AbortError";
 
-  // 1. دالة الترجمة عبر المكتبة الدقيقة (Google Translate API X)
+  // 1. دالة الترجمة عبر المكتبة الدقيقة
   async function translateWithX(text, dir, signal) {
     if (!window.googleTranslateX) throw new Error("lib_missing");
     const from = dir === "ar-en" ? "ar" : "en";
@@ -315,16 +315,21 @@ textarea::placeholder { color: var(--muted); }
     return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
   }
 
-  // 3. MyMemory (احتياطي أخير)
-  async function mm(q, pair, signal) {
-    const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(q) + "&langpair=" + pair;
-    const r = await fetch(url, { signal });
-    if (r.status === 429) throw new Error("quota");
+  // 3. دالة وسيطة (Proxy) لتجاوز حظر CORS في الآيفون
+  async function googleTranslateProxy(text, dir, signal) {
+    const sl = dir === "ar-en" ? "ar" : "en";
+    const tl = dir === "ar-en" ? "en" : "ar";
+    const targetUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+    let r;
+    try {
+      r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { signal });
+    } catch(e) {
+      r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, { signal });
+    }
     if (!r.ok) throw new Error("net");
     const j = await r.json();
-    const t = j && j.responseData && j.responseData.translatedText;
-    if (!t || j.quotaFinished || /MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(t)) throw new Error("quota");
-    return String(t).replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&").trim();
+    if (!j || !j[0] || !Array.isArray(j[0])) throw new Error("bad");
+    return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
   }
 
   async function onlineTranslate(text, dir, signal) {
@@ -345,11 +350,16 @@ textarea::placeholder { color: var(--muted); }
       } catch (e) { if (isAbort(e)) throw e; console.warn("Fallback failed:", e); }
     }
 
-    // المحاولة 3: MyMemory
+    // المحاولة 3: الـ Proxy (لتجاوز حظر الآيفون)
     if (!translation) {
-      translation = await mm(src, dir === "ar-en" ? "ar|en" : "en|ar", signal);
-      return await enrichWords(text, dir, translation, signal, "MyMemory");
+      try {
+        translation = await googleTranslateProxy(src, dir, signal);
+        if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate (Proxy)");
+      } catch (e) { if (isAbort(e)) throw e; console.warn("Proxy failed:", e); }
     }
+
+    // إذا فشلت كل محاولات جوجل، نرمي خطأ (ولن نستخدم MyMemory السيء)
+    throw new Error("net");
   }
 
   async function enrichWords(text, dir, translation, signal, sourceName) {
@@ -368,7 +378,7 @@ textarea::placeholder { color: var(--muted); }
       if (single) return [{ en: top[0], ar: dir === "en-ar" ? translation : text.trim() }];
       const out = await Promise.all(top.map(async (w) => {
         try {
-          const ar = await googleTranslateFallback(w, "en-ar", signal).catch(() => mm(w, "en|ar", signal));
+          const ar = await googleTranslateFallback(w, "en-ar", signal).catch(() => googleTranslateProxy(w, "en-ar", signal));
           return ar && !/[a-z]/i.test(ar) ? { en: w, ar } : null;
         } catch (e) { if (isAbort(e)) throw e; return null; }
       }));
@@ -386,7 +396,7 @@ textarea::placeholder { color: var(--muted); }
             for (const ent of Array.isArray(j) ? j : []) for (const m of ent.meanings || []) for (const d of m.definitions || [])
               if (d.example && d.example.length <= 140 && found.length < 2 && !found.includes(d.example)) found.push(d.example);
             const tr = await Promise.all(found.map(async (s) => {
-              try { return { en: s, ar: await googleTranslateFallback(s, "en-ar", signal).catch(() => mm(s, "en|ar", signal)) }; }
+              try { return { en: s, ar: await googleTranslateFallback(s, "en-ar", signal).catch(() => googleTranslateProxy(s, "en-ar", signal)) }; }
               catch (e) { if (isAbort(e)) throw e; return null; }
             }));
             for (const x of tr) if (x) ex.push(x);
@@ -567,7 +577,7 @@ textarea::placeholder { color: var(--muted); }
           try { data = await modelFallback(text, dir); } catch (e) { data = null; }
         }
 
-        if (!data && netErr && netErr.message === "quota") throw netErr;
+        if (!data && netErr) throw netErr;
       }
       if (my !== reqSeq) return;
       if (!data) { offlineMiss(text, dir); return; }
@@ -593,8 +603,7 @@ textarea::placeholder { color: var(--muted); }
       renderResult(entry);
     } catch (err) {
       if (my !== reqSeq) return;
-      if (err && err.message === "quota") { pauseUntil = Date.now() + 15000; showError("وصلت الحد المجاني. انتظر شوي أو نزّل النموذج."); }
-      else showError("صار خطأ أثناء الترجمة. تأكد من الإنترنت واضغط «ترجم».");
+      showError("حدث خطأ في الاتصال بجوجل. تأكد من الإنترنت وحاول مرة أخرى.");
     } finally {
       if (my === reqSeq) $("liveState").textContent = "";
       goBtn.disabled = false;

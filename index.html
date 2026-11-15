@@ -140,6 +140,7 @@ textarea::placeholder { color: var(--muted); }
         <textarea id="input" dir="auto" maxlength="450" placeholder="اكتب كلمة أو جملة بالعربي أو الإنجليزي… والترجمة تطلع لك مباشرة" aria-label="النص المراد ترجمته"></textarea>
         <div class="row">
           <button class="btn primary" id="goBtn">ترجم</button>
+          <button class="btn" id="pasteBtn">لصق</button>
           <button class="btn" id="clearBtn">مسح</button>
           <span class="hint grow" id="counter"></span>
           <span class="hint" id="liveState" aria-live="polite"></span>
@@ -149,8 +150,8 @@ textarea::placeholder { color: var(--muted); }
       </div>
 
       <div class="card" id="offlineCard">
-        <h2 style="margin:0 0 6px;font-size:18px">ترجمة كاملة بدون إنترنت (مُحسّن للهاتف)</h2>
-        <p class="hint" style="margin:0 0 10px">التطبيق يحتوي الآن على قاموس ضخم مدمج (يعمل فوراً). يمكنك أيضاً تنزيل النموذج الخفيف (80 ميجا) للجمل الطويلة.</p>
+        <h2 style="margin:0 0 6px;font-size:18px">ترجمة بدون إنترنت (احتياطية)</h2>
+        <p class="hint" style="margin:0 0 10px">الترجمة الأونلاين هي الأدق والأولوية دائماً. يمكنك تنزيل النموذج الخفيف (80 ميجا) كخطة بديلة عند انقطاع الإنترنت.</p>
         <div class="row" style="margin-top:0"><button class="btn primary" id="dlBtn">نزّل نموذج الترجمة</button><span class="hint" id="dlState"></span></div>
         <div class="row" style="margin-top:8px">
           <button class="btn small danger" id="clearCacheBtn">مسح كاش الترجمات القديمة</button>
@@ -170,6 +171,12 @@ textarea::placeholder { color: var(--muted); }
     </section>
   </main>
 </div>
+
+<!-- استيراد مكتبة الترجمة الدقيقة من Google -->
+<script type="module">
+  import { translate as googleTranslateX } from 'https://cdn.jsdelivr.net/npm/google-translate-api-x@10.7.3/+esm';
+  window.googleTranslateX = googleTranslateX;
+</script>
 
 <script>
 (function () {
@@ -266,13 +273,38 @@ textarea::placeholder { color: var(--muted); }
   $("clearBtn").addEventListener("click", () => { input.value = ""; stopLive(); $("resultBox").replaceChildren(); updateDir(); input.focus(); });
   goBtn.addEventListener("click", () => { clearTimeout(liveTimer); doTranslate(false); });
 
+  // زر اللصق الجديد
+  $("pasteBtn").addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        input.value = text;
+        updateDir();
+        doTranslate(false);
+      }
+    } catch (err) {
+      alert("تعذر اللصق التلقائي. الرجاء الضغط مطولاً على حقل النص واختيار 'لصق' يدوياً.");
+    }
+  });
+
   function showError(msg) { $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, msg)); }
 
   /* ---------- Translation APIs ---------- */
   const STOP = new Set(("a an the and or but if of to in on at by for with from as is am are was were be been being it its this that these those i you he she we they me him her us them my your his our their do does did have has had will would can could should may might not no so than then there here what which who whom when where why how into out up down over under about very just also").split(" "));
   const isAbort = (e) => e && e.name === "AbortError";
 
-  async function googleTranslate(text, dir, signal) {
+  // 1. دالة الترجمة عبر المكتبة الدقيقة (Google Translate API X)
+  async function translateWithX(text, dir, signal) {
+    if (!window.googleTranslateX) throw new Error("lib_missing");
+    const from = dir === "ar-en" ? "ar" : "en";
+    const to = dir === "ar-en" ? "en" : "ar";
+    const res = await window.googleTranslateX(text, { from, to, client: 'gtx' });
+    if (res && res.text) return res.text;
+    throw new Error("bad_response");
+  }
+
+  // 2. دالة الترجمة القديمة (احتياطية)
+  async function googleTranslateFallback(text, dir, signal) {
     const sl = dir === "ar-en" ? "ar" : "en";
     const tl = dir === "ar-en" ? "en" : "ar";
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
@@ -283,6 +315,7 @@ textarea::placeholder { color: var(--muted); }
     return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
   }
 
+  // 3. MyMemory (احتياطي أخير)
   async function mm(q, pair, signal) {
     const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(q) + "&langpair=" + pair;
     const r = await fetch(url, { signal });
@@ -296,12 +329,27 @@ textarea::placeholder { color: var(--muted); }
 
   async function onlineTranslate(text, dir, signal) {
     const src = text.slice(0, 450);
+    let translation = null;
+
+    // المحاولة 1: المكتبة الدقيقة
     try {
-      const translation = await googleTranslate(src, dir, signal);
-      if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate");
-    } catch (e) { if (isAbort(e)) throw e; }
-    const translation = await mm(src, dir === "ar-en" ? "ar|en" : "en|ar", signal);
-    return await enrichWords(text, dir, translation, signal, "MyMemory");
+      translation = await translateWithX(src, dir, signal);
+      if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate (دقيق)");
+    } catch (e) { if (isAbort(e)) throw e; console.warn("X lib failed:", e); }
+
+    // المحاولة 2: الرابط القديم
+    if (!translation) {
+      try {
+        translation = await googleTranslateFallback(src, dir, signal);
+        if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate");
+      } catch (e) { if (isAbort(e)) throw e; console.warn("Fallback failed:", e); }
+    }
+
+    // المحاولة 3: MyMemory
+    if (!translation) {
+      translation = await mm(src, dir === "ar-en" ? "ar|en" : "en|ar", signal);
+      return await enrichWords(text, dir, translation, signal, "MyMemory");
+    }
   }
 
   async function enrichWords(text, dir, translation, signal, sourceName) {
@@ -320,7 +368,7 @@ textarea::placeholder { color: var(--muted); }
       if (single) return [{ en: top[0], ar: dir === "en-ar" ? translation : text.trim() }];
       const out = await Promise.all(top.map(async (w) => {
         try {
-          const ar = await googleTranslate(w, "en-ar", signal).catch(() => mm(w, "en|ar", signal));
+          const ar = await googleTranslateFallback(w, "en-ar", signal).catch(() => mm(w, "en|ar", signal));
           return ar && !/[a-z]/i.test(ar) ? { en: w, ar } : null;
         } catch (e) { if (isAbort(e)) throw e; return null; }
       }));
@@ -338,7 +386,7 @@ textarea::placeholder { color: var(--muted); }
             for (const ent of Array.isArray(j) ? j : []) for (const m of ent.meanings || []) for (const d of m.definitions || [])
               if (d.example && d.example.length <= 140 && found.length < 2 && !found.includes(d.example)) found.push(d.example);
             const tr = await Promise.all(found.map(async (s) => {
-              try { return { en: s, ar: await googleTranslate(s, "en-ar", signal).catch(() => mm(s, "en|ar", signal)) }; }
+              try { return { en: s, ar: await googleTranslateFallback(s, "en-ar", signal).catch(() => mm(s, "en|ar", signal)) }; }
               catch (e) { if (isAbort(e)) throw e; return null; }
             }));
             for (const x of tr) if (x) ex.push(x);
@@ -353,7 +401,7 @@ textarea::placeholder { color: var(--muted); }
     return { translation, words, examples, note: "من " + sourceName };
   }
 
-  /* ---------- Cache & Dictionary ---------- */
+  /* ---------- Cache ---------- */
   const CKEY = "tarjuman:cache:v2";
   let cache = read(CKEY, {}, {});
   function cacheGet(text, dir) { const c = cache[dir + "|" + norm(text)]; return c ? c.data : null; }
@@ -374,51 +422,17 @@ textarea::placeholder { color: var(--muted); }
     $("cacheState").textContent = "(تم المسح ✓)";
   });
 
-  /* قاموس مدمج ضخم ومحدث (أكثر من 1500 كلمة وجملة شائعة) */
-  const DICT_RAW = "hello=مرحبا|hi=أهلا|goodbye=مع السلامة|thanks=شكرا|please=من فضلك|sorry=آسف|yes=نعم|no=لا|maybe=ربما|okay=حسنا|good morning=صباح الخير|good evening=مساء الخير|good night=تصبح على خير|how are you=كيف حالك|excuse me=عذرا|i love you=أحبك|what is your name=ما اسمك|how much=بكم|where is=أين|morning=صباح|evening=مساء|night=ليل|man=رجل|woman=امرأة|boy=ولد|girl=بنت|child=طفل|baby=رضيع|father=أب|mother=أم|brother=أخ|sister=أخت|son=ابن|daughter=ابنة|husband=زوج|wife=زوجة|family=عائلة|friend=صديق|teacher=معلم|student=طالب|doctor=طبيب|nurse=ممرضة|engineer=مهندس|driver=سائق|worker=عامل|boss=مدير|king=ملك|people=ناس|person=شخص|food=طعام|water=ماء|milk=حليب|tea=شاي|coffee=قهوة|juice=عصير|bread=خبز|rice=أرز|meat=لحم|chicken=دجاج|fish=سمك|egg=بيضة|cheese=جبن|sugar=سكر|salt=ملح|oil=زيت|fruit=فاكهة|vegetable=خضار|apple=تفاح|banana=موز|orange=برتقال|grape=عنب|lemon=ليمون|tomato=طماطم|potato=بطاطس|onion=بصل|garlic=ثوم|cake=كعكة|honey=عسل|breakfast=فطور|lunch=غداء|dinner=عشاء|hungry=جائع|thirsty=عطشان|delicious=لذيذ|cook=يطبخ|eat=يأكل|drink=يشرب|house=بيت|home=منزل|room=غرفة|door=باب|window=نافذة|table=طاولة|chair=كرسي|bed=سرير|kitchen=مطبخ|bathroom=حمام|garden=حديقة|key=مفتاح|book=كتاب|pen=قلم|paper=ورق|phone=هاتف|computer=حاسوب|television=تلفاز|car=سيارة|bus=حافلة|train=قطار|plane=طائرة|ship=سفينة|bicycle=دراجة|road=طريق|street=شارع|city=مدينة|village=قرية|country=بلد|school=مدرسة|university=جامعة|hospital=مستشفى|market=سوق|shop=متجر|bank=بنك|mosque=مسجد|airport=مطار|hotel=فندق|restaurant=مطعم|office=مكتب|bag=حقيبة|clothes=ملابس|shirt=قميص|shoes=حذاء|hat=قبعة|money=مال|price=سعر|ticket=تذكرة|picture=صورة|music=موسيقى|game=لعبة|gift=هدية|map=خريطة|passport=جواز سفر|visa=تأشيرة|police=شرطة|internet=إنترنت|message=رسالة|sun=شمس|moon=قمر|star=نجمة|sky=سماء|sea=بحر|river=نهر|mountain=جبل|desert=صحراء|tree=شجرة|flower=زهرة|rain=مطر|wind=رياح|snow=ثلج|ice=جليد|fire=نار|earth=أرض|weather=طقس|hot=حار|cold=بارد|warm=دافئ|day=يوم|week=أسبوع|month=شهر|year=سنة|hour=ساعة|minute=دقيقة|second=ثانية|time=وقت|today=اليوم|tomorrow=غدا|yesterday=أمس|now=الآن|later=لاحقا|always=دائما|never=أبدا|dog=كلب|cat=قطة|horse=حصان|camel=جمل|bird=طائر|cow=بقرة|sheep=خروف|lion=أسد|head=رأس|face=وجه|eye=عين|ear=أذن|nose=أنف|mouth=فم|hand=يد|finger=إصبع|leg=ساق|foot=قدم|heart=قلب|body=جسم|hair=شعر|tooth=سن|zero=صفر|one=واحد|two=اثنان|three=ثلاثة|four=أربعة|five=خمسة|six=ستة|seven=سبعة|eight=ثمانية|nine=تسعة|ten=عشرة|hundred=مئة|thousand=ألف|first=أول|last=أخير|half=نصف|red=أحمر|blue=أزرق|green=أخضر|yellow=أصفر|black=أسود|white=أبيض|brown=بني|gray=رمادي|pink=وردي|color=لون|big=كبير|small=صغير|long=طويل|short=قصير|tall=طويل القامة|new=جديد|old=قديم|young=شاب|good=جيد|bad=سيئ|beautiful=جميل|ugly=قبيح|happy=سعيد|sad=حزين|angry=غاضب|tired=متعب|sick=مريض|healthy=صحي|strong=قوي|weak=ضعيف|fast=سريع|slow=بطيء|easy=سهل|difficult=صعب|important=مهم|expensive=غالي|cheap=رخيص|clean=نظيف|dirty=متسخ|full=ممتلئ|empty=فارغ|open=مفتوح|close=يغلق|near=قريب|far=بعيد|right=يمين|left=يسار|heavy=ثقيل|light=خفيف|rich=غني|poor=فقير|free=مجاني|safe=آمن|quiet=هادئ|loud=صاخب|busy=مشغول|ready=جاهز|late=متأخر|early=مبكر|different=مختلف|same=نفس|other=آخر|many=كثير|few=قليل|all=كل|some=بعض|more=أكثر|less=أقل|very=جدا|enough=كاف|go=يذهب|come=يأتي|sleep=ينام|wake=يستيقظ|walk=يمشي|run=يركض|sit=يجلس|stand=يقف|read=يقرأ|write=يكتب|speak=يتكلم|say=يقول|tell=يخبر|ask=يسأل|answer=يجيب|listen=يستمع|hear=يسمع|see=يرى|look=ينظر|watch=يشاهد|know=يعرف|think=يفكر|understand=يفهم|learn=يتعلم|teach=يعلّم|study=يدرس|work=يعمل|play=يلعب|buy=يشتري|sell=يبيع|pay=يدفع|give=يعطي|take=يأخذ|bring=يحضر|send=يرسل|receive=يستلم|make=يصنع|do=يفعل|want=يريد|need=يحتاج|like=يحب|love=يعشق|hate=يكره|help=يساعد|try=يحاول|start=يبدأ|stop=يتوقف|finish=ينهي|wait=ينتظر|find=يجد|lose=يفقد|keep=يحتفظ|put=يضع|carry=يحمل|wear=يرتدي|wash=يغسل|build=يبني|break=يكسر|fix=يصلح|cut=يقطع|draw=يرسم|sing=يغني|dance=يرقص|travel=يسافر|visit=يزور|meet=يقابل|live=يعيش|die=يموت|remember=يتذكر|forget=ينسى|believe=يؤمن|hope=يأمل|feel=يشعر|smile=يبتسم|laugh=يضحك|cry=يبكي|fall=يسقط|climb=يتسلق|swim=يسبح|fly=يطير|drive=يقود|ride=يركب|change=يغير|choose=يختار|decide=يقرر|agree=يوافق|call=يتصل|enter=يدخل|leave=يغادر|return=يعود|arrive=يصل|pray=يصلي|wish=يتمنى|share=يشارك|save=يوفر|win=يفوز|grow=ينمو|pull=يسحب|happen=يحدث|become=يصبح|show=يظهر|move=يتحرك|follow=يتبع|join=ينضم|add=يضيف|count=يعد|throw=يرمي|catch=يمسك|what=ماذا|who=من|where=أين|when=متى|why=لماذا|how=كيف|which=أي|here=هنا|there=هناك|this=هذا|that=ذلك|and=و|or=أو|but=لكن|because=لأن|with=مع|without=بدون|under=تحت|behind=خلف|between=بين|before=قبل|after=بعد|again=مرة أخرى|also=أيضا|only=فقط|already=بالفعل|together=معا|alone=وحيد|life=حياة|death=موت|peace=سلام|war=حرب|health=صحة|job=وظيفة|problem=مشكلة|question=سؤال|idea=فكرة|dream=حلم|name=اسم|word=كلمة|language=لغة|number=رقم|story=قصة|news=أخبار|truth=حقيقة|reason=سبب|example=مثال|way=طريقة|place=مكان|thing=شيء|part=جزء|side=جانب|end=نهاية|beginning=بداية|world=عالم|science=علم|art=فن|history=تاريخ|religion=دين|god=الله|power=قوة|luck=حظ|fear=خوف|joy=فرح|pain=ألم|trip=رحلة|holiday=إجازة|birthday=عيد ميلاد|party=حفلة|meeting=اجتماع|lesson=درس|exam=امتحان|test=اختبار|secret=سر|email=بريد إلكتروني|video=فيديو|football=كرة قدم|basketball=كرة سلة|tennis=تنس|swimming=سباحة|running=جري|walking=مشي|sleeping=نوم|eating=أكل|drinking=شرب|cooking=طبخ|reading=قراءة|writing=كتابة|singing=غناء|dancing=رقص|drawing=رسم|painting=رسم|playing=لعب|working=عمل|studying=دراسة|teaching=تدريس|learning=تعلم|building=بناء|fixing=إصلاح|cleaning=تنظيف|washing=غسيل|cooking=طبخ|baking=خبز|frying=قلي|boiling=غليان|grilling=شوي|roasting=تحميص|steaming=تبخير|microwaving=تسخين بالميكروويف|freezing=تجميد|melting=إذابة|mixing=خلط|chopping=تقطيع|slicing=تقطيع شرائح|peeling=تقشير|pouring=سكب|filling=تعبئة|emptying=إفراغ|opening=فتح|closing=إغلاق|locking=قفل|unlocking=فتح القفل|pushing=دفع|pulling=سحب|lifting=رفع|lowering=خفض|throwing=رمي|catching=التقاط|hitting=ضرب|kicking=رفس|biting=عض|licking=لعق|smelling=شم|touching=لمس|hearing=سمع|seeing=رؤية|tasting=تذوق|thinking=تفكير|knowing=معرفة|understanding=فهم|believing=إيمان|hoping=أمل|wishing=تمني|wanting=رغبة|needing=حاجة|liking=إعجاب|loving=حب|hating=كراهية|fearing=خوف|enjoying=استمتاع|suffering=معاناة|smiling=ابتسامة|laughing=ضحك|crying=بكاء|screaming=صراخ|whispering=همس|shouting=صراخ|speaking=تحدث|talking=تكلم|saying=قول|telling=إخبار|asking=سؤال|answering=إجابة|replying=رد|arguing=جدال|fighting=قتال|quarreling=تشاجر|agreeing=موافقة|disagreeing=رفض|promising=وعد|apologizing=اعتذار|thanking=شكر|greeting=تحية|saying goodbye=توديع|introducing=تقديم|meeting=مقابلة|parting=فراق|arriving=وصول|leaving=مغادرة|entering=دخول|exiting=خروج|returning=عودة|staying=بقاء|visiting=زيارة|traveling=سفر|moving=انتقال|migrating=هجرة|emigrating=هجرة|immigrating=هجرة|exploring=استكشاف|discovering=اكتشاف|inventing=اختراع|creating=إبداع|designing=تصميم|building=بناء|destroying=تدمير|breaking=كسر|fixing=إصلاح|repairing=تصليح|cleaning=تنظيف|washing=غسل|drying=تجفيف|ironing=كي|folding=طي|packing=تعبئة|unpacking=تفريغ|organizing=تنظيم|arranging=ترتيب|sorting=فرز|counting=عد|measuring=قياس|weighing=وزن|calculating=حساب|solving=حل|analyzing=تحليل|comparing=مقارنة|contrasting=مقابلة|choosing=اختيار|deciding=قرار|planning=تخطيط|preparing=تحضير|starting=بدء|beginning=بداية|continuing=استمرار|finishing=إنهاء|ending=نهاية|stopping=توقف|pausing=توقف مؤقت|resuming=استئناف|restarting=إعادة بدء|repeating=تكرار|practicing=تدريب|training=تدريب|exercising=تمرين|playing=لعب|competing=تنافس|winning=فوز|losing=خسارة|tying=تعادل|scoring=تسجيل|defending=دفاع|attacking=هجوم|shooting=تسديد|passing=تمرير|dribbling=مراوغة|blocking=صد|tackling=اعتراض|running=جري|jumping=قفز|hopping=نط|skipping=قفز بالحبل|climbing=تسلق|crawling=زحف|sliding=انزلاق|rolling=تدحرج|spinning=دوران|turning=التفاف|bending=انحناء|stretching=تمدد|twisting=التواء|lifting=رفع|carrying=حمل|pushing=دفع|pulling=سحب|dragging=سحب|throwing=رمي|catching=التقاط|kicking=رفس|hitting=ضرب|punching=لكم|slapping=صفع|biting=عض|scratching=خدش|pinching=قرص|tickling=دغدغة|hugging=عناق|kissing=تقبيل|shaking hands=مصافحة|waving=تلويح|pointing=إشارة|nodding=إيماء|shrugging=هز الكتفين|frowning=عبوس|smiling=ابتسام|laughing=ضحك|crying=بكاء|sighing=تنهد|yawning=تثاؤب|sneezing=عطس|coughing=سعال|burping=تجشؤ|hiccuping=حازوقة|snoring=شخير|breathing=تنفس|inhaling=شهيق|exhaling=زفير|sweating=تعرق|shivering=ارتجاف|freezing=تجميد|burning=حرق|boiling=غليان|melting=ذوبان|evaporating=تبخر|condensing=تكثف|freezing=تجميد|thawing=ذوبان|growing=نمو|shrinking=انكماش|expanding=توسع|contracting=انقباض|increasing=زيادة|decreasing=نقصان|multiplying=ضرب|dividing=قسمة|adding=جمع|subtracting=طرح";
-  const normAr = (s) => String(s).replace(/[\u064B-\u065F\u0670\u0640]/g, "").replace(/[إأآ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").trim();
-  const EN2AR = {}, AR2EN = {};
-  for (const p of DICT_RAW.split("|")) {
-    const i = p.indexOf("=");
-    const en = p.slice(0, i).trim().toLowerCase(), ar = p.slice(i + 1).trim();
-    if (!en || !ar) continue;
-    EN2AR[en] = ar;
-    for (const part of ar.split("،")) { const k = normAr(part); if (k && !AR2EN[k]) AR2EN[k] = en; }
-  }
-  function dictGet(text, dir) {
-    const t = text.trim().replace(/[.!?؟،,]+$/g, "").replace(/\s+/g, " ");
-    if (dir === "en-ar") {
-      const en = t.toLowerCase(), ar = EN2AR[en];
-      if (ar) return { translation: ar.split("،").join("، "), words: [{ en, ar: ar.split("،")[0] }], examples: [], note: "من القاموس المدمج (بدون إنترنت)" };
-    } else {
-      const en = AR2EN[normAr(t)];
-      if (en) return { translation: en, words: [{ en, ar: EN2AR[en].split("،")[0] }], examples: [], note: "من القاموس المدمج (بدون إنترنت)" };
-    }
-    return null;
-  }
-
+  /* ---------- Offline Miss (بدون قاموس) ---------- */
   function offlineMiss(text, dir) {
-    const tin = h("input", { type: "text", class: "type-in", dir: dir === "ar-en" ? "ltr" : "rtl",
-      placeholder: dir === "ar-en" ? "اكتب الترجمة الإنجليزية هنا…" : "اكتب المعنى بالعربي هنا…" });
-    const use = () => {
-      const v = tin.value.trim();
-      if (!v) return;
-      const enSide = (dir === "ar-en" ? v : text).trim(), arSide = (dir === "ar-en" ? text : v).trim();
-      const single = /^[A-Za-z][A-Za-z'-]*$/.test(enSide);
-      renderResult({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: Date.now(), dir, text, translation: v,
-        words: single ? [{ en: enSide.toLowerCase(), ar: arSide }] : [], examples: [], note: "ترجمة كتبتها أنت" });
-    };
-    tin.addEventListener("keydown", (e) => { if (e.key === "Enter") use(); });
     $("resultBox").replaceChildren(
-      h("div", { class: "err", role: "alert" }, "ما لقيت هذي الترجمة بدون إنترنت. اتصل بالإنترنت وجرّب، أو اكتب الترجمة بنفسك واحفظها."),
-      h("div", { style: "margin-top:10px" }, tin),
-      h("div", { class: "row", style: "justify-content:center" }, h("button", { class: "btn primary", onclick: use }, "استخدم ترجمتي")));
+      h("div", { class: "err", role: "alert" }, "لا يوجد اتصال بالإنترنت، ولم يتم تنزيل نموذج الأوفلاين. يرجى الاتصال أو تنزيل النموذج."),
+    );
   }
 
   function updNet() { $("netState").textContent = navigator.onLine === false ? "● بدون إنترنت" : ""; }
   addEventListener("online", updNet); addEventListener("offline", updNet);
 
-  /* ---------- Model (OPUS-MT - Lightweight for iPhone) ---------- */
+  /* ---------- Model (OPUS-MT) ---------- */
   const MODEL_LIB = "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
   const MODELS = { "en-ar": "Xenova/opus-mt-en-ar", "ar-en": "Xenova/opus-mt-ar-en" };
   const MKEY = "tarjuman:model:v2";
@@ -525,7 +539,7 @@ textarea::placeholder { color: var(--muted); }
   refreshModelUI();
   refreshCacheUI();
 
-  /* ---------- MAIN TRANSLATE ---------- */
+  /* ---------- MAIN TRANSLATE (الأونلاين دائماً أولاً) ---------- */
   async function doTranslate(auto) {
     const text = input.value.trim();
     if (!text) { input.focus(); return; }
@@ -540,20 +554,19 @@ textarea::placeholder { color: var(--muted); }
       let data = cacheGet(text, dir), netErr = null;
 
       if (!data) {
-        // 1. البحث في القاموس المدمج أولاً (فوري وبدون إنترنت)
-        data = dictGet(text, dir);
-        
-        // 2. إذا لم نجده، نبحث في النموذج
-        if (!data && modelReady[dir]) {
-          $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
-          try { data = await modelFallback(text, dir); } catch (e) { data = null; }
-        }
-        // 3. إذا لم نجده، نستخدم الإنترنت
-        if (!data && navigator.onLine !== false) {
+        // 1. الأونلاين دائماً هو الأولوية (الأدق)
+        if (navigator.onLine !== false) {
           $("liveState").textContent = "جاري الترجمة أونلاين…";
           try { data = await onlineTranslate(text, dir, signal); cachePut(text, dir, data); refreshCacheUI(); }
           catch (e) { if (isAbort(e)) throw e; netErr = e; }
         }
+        
+        // 2. إذا فشل الأونلاين، نستخدم النموذج (إذا كان موجوداً)
+        if (!data && modelReady[dir]) {
+          $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
+          try { data = await modelFallback(text, dir); } catch (e) { data = null; }
+        }
+
         if (!data && netErr && netErr.message === "quota") throw netErr;
       }
       if (my !== reqSeq) return;
@@ -664,11 +677,17 @@ textarea::placeholder { color: var(--muted); }
       catch (x) { copyBtn.textContent = "ما اننسخ"; }
       setTimeout(() => (copyBtn.textContent = "نسخ"), 1500);
     } }, "نسخ");
+
+    const googleBtn = h("button", { class: "btn small", onclick: () => {
+      const url = `https://translate.google.com/?sl=${e.dir === "ar-en" ? "ar" : "en"}&tl=${e.dir === "ar-en" ? "en" : "ar"}&text=${encodeURIComponent(e.text)}&op=translate`;
+      window.open(url, '_blank');
+    } }, "فتح في Google Translate");
+
     const box = $("resultBox");
     const noteEl = e.note ? h("p", { class: "hint" }, h("span", { class: "src-tag" }, e.note)) : null;
     box.replaceChildren(
       h("p", { class: "out", dir: outDir }, e.translation),
-      h("div", { class: "row" }, copyBtn, speakBtn(enText, "انطق الإنجليزي"), speakBtn(enText, "ببطء", true)),
+      h("div", { class: "row" }, copyBtn, speakBtn(enText, "انطق الإنجليزي"), speakBtn(enText, "ببطء", true), googleBtn),
       savePrompt(e),
       noteEl
     );
@@ -676,7 +695,7 @@ textarea::placeholder { color: var(--muted); }
     if (e.examples && e.examples.length) box.append(h("p", { class: "words-title" }, "أمثلة"), exampleList(e.examples));
   }
 
-  /* ---------- Quiz & History ---------- */
+  /* ---------- Quiz & History (بدون تغييرات جوهرية) ---------- */
   const MASTER = 30;
   const streakOf = (w) => ((stats[norm(w.en)] || {}).s) || 0;
   const isMastered = (w) => streakOf(w) >= MASTER;

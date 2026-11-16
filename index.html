@@ -74,8 +74,6 @@ textarea::placeholder { color: var(--muted); }
 .dict-pos-title { font-size: 18px; font-weight: 600; color: var(--accent); margin: 0 0 8px; border-bottom: 1px solid var(--accent-soft); padding-bottom: 4px; display: inline-block; }
 .dict-def { margin-bottom: 12px; padding-inline-start: 12px; border-inline-start: 2px solid var(--line); }
 .dict-def-text { font-size: 17px; margin: 0 0 4px; }
-.dict-example { font-size: 15px; color: var(--muted); font-style: italic; margin: 4px 0 0; }
-.dict-example .en { direction: ltr; text-align: left; display: block; font-family: monospace; font-size: 14px; margin-top: 2px; }
 
 /* Quiz & History */
 .quiz h2 { margin: 0 0 4px; font-size: 20px; }
@@ -274,7 +272,8 @@ textarea::placeholder { color: var(--muted); }
     const t = input.value.trim();
     if (!t) { stopLive(); $("resultBox").replaceChildren(); return; }
     if (t.length < 2 || denied || Date.now() < pauseUntil) return;
-    liveTimer = setTimeout(() => doTranslate(true), 900);
+    // زيادة وقت الانتظار إلى 1200 مللي ثانية لتقليل الطلبات وجعل التطبيق أسرع
+    liveTimer = setTimeout(() => doTranslate(true), 1200);
   });
   input.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { clearTimeout(liveTimer); doTranslate(false); } });
   $("clearBtn").addEventListener("click", () => { input.value = ""; stopLive(); $("resultBox").replaceChildren(); updateDir(); input.focus(); });
@@ -289,31 +288,24 @@ textarea::placeholder { color: var(--muted); }
 
   function showError(msg) { $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, msg)); }
 
-  /* ---------- Translation APIs ---------- */
+  /* ---------- Translation API (Google Direct) ---------- */
   const isAbort = (e) => e && e.name === "AbortError";
   const POS_MAP = { noun: "اسم", verb: "فعل", adjective: "صفة", adverb: "ظرف (حال)", pronoun: "ضمير", preposition: "حرف جر", conjunction: "حرف عطف", interjection: "حرف نداء", determiner: "مُحدد", abbreviation: "اختصار" };
 
-  // دالة جلب الترجمة + القاموس مباشرة من جوجل
   async function fetchFromGoogle(text, dir, signal) {
     const sl = dir === "ar-en" ? "ar" : "en";
     const tl = dir === "ar-en" ? "en" : "ar";
-    // dt=t (ترجمة)، dt=bd (قاموس)، dt=ex (أمثلة)
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&dt=ex&q=${encodeURIComponent(text)}`;
     
-    let r;
-    try { 
-      r = await fetch(url, { signal }); 
-    } catch(e) {
-      // إذا حظر المتصفح الطلب المباشر، نستخدم بروكسي
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-      r = await fetch(proxyUrl, { signal });
-    }
-
+    // طلب واحد فقط يجلب الترجمة والقاموس معاً
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&q=${encodeURIComponent(text)}`;
+    
+    // نستخدم الاتصال المباشر لأنه الأسرع بكثير
+    const r = await fetch(url, { signal });
     if (!r.ok) throw new Error("net");
     const j = await r.json();
     if (!j || !j[0]) throw new Error("bad");
 
-    // 1. استخراج الترجمة الأساسية
+    // 1. استخراج الترجمة
     const translation = j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
 
     // 2. استخراج القاموس (إذا كانت الكلمة مفردة)
@@ -324,68 +316,13 @@ textarea::placeholder { color: var(--muted); }
         if (!entry || !entry[0]) continue;
         const posEn = entry[0].toLowerCase();
         const posAr = POS_MAP[posEn] || entry[0];
-        
-        // entry[1] يحتوي على التعريفات باللغة الإنجليزية
-        // entry[2] يحتوي على الترجمة العربية
-        const defs = (entry[1] || []).slice(0, 2).map((defEn, i) => {
-           return {
-             def: entry[2] && entry[2][i] ? entry[2][i] : defEn,
-             example: null // الأمثلة تأتي في مكان آخر، سنحاول التقاطها إن وجدت
-           };
-        });
-
-        // محاولة استخراج الأمثلة من نفس الاستجابة (إذا كانت موجودة)
-        // جوجل يضع الأمثلة عادة في جزء منفصل، لكننا سنكتفي بالتعريفات حالياً لضمان السرعة
-        
+        const defs = (entry[1] || []).slice(0, 2).map((defEn, i) => ({
+          def: entry[2] && entry[2][i] ? entry[2][i] : defEn
+        }));
         if (defs.length) dictData.meanings.push({ pos: posAr, defs });
       }
     }
-
     return { translation, dictData };
-  }
-
-  async function enrichWords(text, dir, translation, signal, sourceName) {
-    const isSingleWord = !/\s/.test(text.trim());
-    let dictData = null;
-
-    // جلب بيانات القاموس من جوجل
-    if (isSingleWord && navigator.onLine !== false) {
-      try { 
-        const res = await fetchFromGoogle(text, dir, signal);
-        dictData = res.dictData;
-      } catch(e) { console.warn("Dictionary fetch failed:", e); }
-    }
-
-    const enText = dir === "ar-en" ? translation : text;
-    const toks = (enText.toLowerCase().match(/[a-z][a-z'-]*/g) || []).map((w) => w.replace(/^['-]+|['-]+$/g, "")).filter(Boolean);
-    const single = toks.length === 1;
-    const seen = new Set(), picked = [];
-    for (const t of toks) {
-      if (seen.has(t)) continue; seen.add(t);
-      if (!single && (STOP.has(t) || t.length < 3)) continue;
-      picked.push(t);
-    }
-    const top = picked.slice(0, 4);
-
-    const wordsP = (async () => {
-      if (single) return [{ en: top[0], ar: dir === "en-ar" ? translation : text.trim() }];
-      const out = await Promise.all(top.map(async (w) => {
-        try {
-          const ar = await fetchFromGoogle(w, "en-ar", signal).then(r => r.translation);
-          return ar && !/[a-z]/i.test(ar) ? { en: w, ar } : null;
-        } catch (e) { if (isAbort(e)) throw e; return null; }
-      }));
-      return out.filter(Boolean);
-    })();
-
-    const examplesP = (async () => {
-      const ex = [];
-      if (!ex.length && toks.length >= 3) ex.push({ en: enText.slice(0, 200), ar: dir === "ar-en" ? text : translation });
-      return ex;
-    })();
-
-    const [words, examples] = await Promise.all([wordsP, examplesP]);
-    return { translation, words, examples, dictData, note: "من " + sourceName };
   }
 
   /* ---------- Cache ---------- */
@@ -410,7 +347,7 @@ textarea::placeholder { color: var(--muted); }
   });
 
   function offlineMiss(text, dir) {
-    $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, "لا يوجد اتصال بالإنترنت، ولم يتم تنزيل نموذج الأوفلاين. يرجى الاتصال أو تنزيل النموذج."));
+    $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, "لا يوجد اتصال بالإنترنت. يرجى الاتصال أو تنزيل نموذج الأوفلاين."));
   }
 
   function updNet() { $("netState").textContent = navigator.onLine === false ? "● بدون إنترنت" : ""; }
@@ -436,30 +373,10 @@ textarea::placeholder { color: var(--muted); }
     }
     return pipes[dir];
   }
-  function chunkText(text, maxLength = 400) {
-    if (text.length <= maxLength) return [text];
-    const chunks = []; let current = "";
-    const sentences = text.split(/(?<=[.!?؟])\s+/);
-    for (const sentence of sentences) {
-      if ((current + " " + sentence).length > maxLength && current) { chunks.push(current.trim()); current = sentence; }
-      else { current += (current ? " " : "") + sentence; }
-    }
-    if (current.trim()) chunks.push(current.trim());
-    return chunks;
-  }
   async function modelTranslate(text, dir) {
-    const p = await getPipe(dir); const chunks = chunkText(text); let fullTranslation = "";
-    for (const chunk of chunks) {
-      const out = await p(chunk, { max_length: 512 });
-      const part = String((out && out[0] && out[0].translation_text) || "").trim();
-      if (part) fullTranslation += (fullTranslation ? " " : "") + part;
-    }
-    return fullTranslation.trim();
-  }
-  async function modelFallback(text, dir) {
-    const translation = await modelTranslate(text, dir);
-    if (!translation) return null;
-    return { translation, words: [], examples: [], note: "من النموذج الخفيف على جهازك (بدون إنترنت)" };
+    const p = await getPipe(dir);
+    const out = await p(text, { max_length: 512 });
+    return String((out && out[0] && out[0].translation_text) || "").trim();
   }
 
   const dlBtn = $("dlBtn"), dlState = $("dlState");
@@ -512,47 +429,37 @@ textarea::placeholder { color: var(--muted); }
         if (navigator.onLine !== false) {
           $("liveState").textContent = "جاري الترجمة أونلاين…";
           try { 
-            // 1. محاولة جلب الترجمة والقاموس من جوجل مباشرة
+            // طلب واحد سريع لجوجل
             const res = await fetchFromGoogle(text, dir, signal);
             if (res && res.translation) {
-              data = await enrichWords(text, dir, res.translation, signal, "Google Translate");
-              data.dictData = res.dictData; // إرفاق القاموس
+              data = { 
+                translation: res.translation, 
+                dictData: res.dictData, 
+                words: [], // لا نحتاج لجلب كل كلمة الآن لتسريع التطبيق
+                examples: [], 
+                note: "من Google Translate" 
+              };
               cachePut(text, dir, data); refreshCacheUI();
             }
           } catch (e) { if (isAbort(e)) throw e; netErr = e; }
         }
         if (!data && modelReady[dir]) {
-          $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
-          try { data = await modelFallback(text, dir); } catch (e) { data = null; }
+          $("liveState").textContent = "جاري الترجمة بالنموذج…";
+          try { 
+            const trans = await modelTranslate(text, dir);
+            if (trans) data = { translation: trans, dictData: null, words: [], examples: [], note: "من النموذج على جهازك" };
+          } catch (e) { data = null; }
         }
         if (!data && netErr) throw netErr;
       }
       if (my !== reqSeq) return;
       if (!data) { offlineMiss(text, dir); return; }
       
-      const translation = String(data.translation || "").trim();
-      if (!translation) { showError("ما قدرت أترجم هذا النص."); return; }
-
-      const words = [];
-      const seen = new Set();
-      for (const w of Array.isArray(data.words) ? data.words : []) {
-        if (!w || typeof w.en !== "string" || typeof w.ar !== "string") continue;
-        const en = w.en.trim(), ar = w.ar.trim();
-        if (!en || !ar || seen.has(norm(en))) continue;
-        seen.add(norm(en)); words.push({ en, ar });
-      }
-      const examples = [];
-      for (const x of Array.isArray(data.examples) ? data.examples : []) {
-        if (!x || typeof x.en !== "string" || typeof x.ar !== "string") continue;
-        const en = x.en.trim(), ar = x.ar.trim();
-        if (en && ar && examples.length < 3) examples.push({ en, ar });
-      }
-
       const entry = { 
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), 
-        ts: Date.now(), dir, text, translation, words, examples, 
-        dictData: data.dictData,
-        note: data.note || "" 
+        ts: Date.now(), dir, text, translation: data.translation, 
+        words: data.words, examples: data.examples, 
+        dictData: data.dictData, note: data.note || "" 
       };
       renderResult(entry);
     } catch (err) {
@@ -575,60 +482,38 @@ textarea::placeholder { color: var(--muted); }
     }));
   }
 
-  function exampleList(ex) {
-    return h("div", { class: "examples" }, ex.map((x) =>
-      h("div", { class: "ex" }, h("div", { class: "en-row" }, h("div", { class: "en", dir: "ltr" }, x.en), speakBtn(x.en)), h("div", { class: "ar" }, x.ar))));
-  }
-
   function findSaved(e) { return history.find((x) => norm(x.text) === norm(e.text) && x.dir === e.dir) || null; }
 
   function savePrompt(e) {
     const wrap = h("div", { class: "save-box" });
     const done = (msg, ok) => wrap.replaceChildren(h("p", { class: "save-msg" + (ok ? " ok" : "") }, msg));
     const existing = findSaved(e);
-    const isSentence = /\s/.test(e.text.trim());
-    const showText = isSentence || e.words.length === 0;
     const textSaved = !!(existing && !existing.noText);
-    const savedHas = (w) => !!(existing && existing.words.some((x) => norm(x.en) === norm(w.en)));
 
-    const rows = e.words.map((w) => {
-      const saved = savedHas(w);
-      const box = h("input", { type: "checkbox", checked: true, disabled: saved });
-      const row = h("label", { class: "pick" + (saved ? " saved" : "") }, box,
-        h("span", { class: "pw", dir: "ltr" }, w.en), h("span", { class: "pa" }, "= " + w.ar + (saved ? "  (محفوظة)" : "")));
-      return { w, box, row, saved };
-    });
-    let textBox = null, textRow = null;
-    if (showText) {
-      textBox = h("input", { type: "checkbox", checked: true, disabled: textSaved });
-      textRow = h("label", { class: "pick pick-text" + (textSaved ? " saved" : "") }, textBox,
-        h("span", { class: "pa" }, "النص كامل: " + (e.text.length > 60 ? e.text.slice(0, 60) + "…" : e.text) + (textSaved ? "  (محفوظ)" : "")));
-    }
-    const nothingNew = rows.every((r) => r.saved) && (!showText || textSaved);
-    if (existing && nothingNew) { done("✓ محفوظة في السجل.", true); return wrap; }
+    const textBox = h("input", { type: "checkbox", checked: true, disabled: textSaved });
+    const textRow = h("label", { class: "pick pick-text" + (textSaved ? " saved" : "") }, textBox,
+      h("span", { class: "pa" }, "حفظ الكلمة/النص في السجل" + (textSaved ? "  (محفوظ)" : "")));
+
+    if (existing && textSaved) { done("✓ محفوظة في السجل.", true); return wrap; }
 
     const save = () => {
-      const chosen = rows.filter((r) => !r.saved && r.box.checked).map((r) => r.w);
-      const wantText = showText ? (!textSaved && textBox.checked) : chosen.length > 0;
-      if (!chosen.length && !wantText) { done("ما اخترت شي.", false); return; }
+      if (!textBox.checked) { done("لم يتم الحفظ.", false); return; }
       if (existing) {
-        chosen.forEach((w) => existing.words.push(w));
-        if (wantText) existing.noText = false;
-        if (!(existing.examples && existing.examples.length) && e.examples) existing.examples = e.examples;
+        existing.noText = false;
         if (!existing.dictData && e.dictData) existing.dictData = e.dictData;
       } else {
-        history.unshift(Object.assign({}, e, { words: chosen, noText: showText ? !textBox.checked : false }));
+        history.unshift(Object.assign({}, e, { noText: false }));
       }
       if (history.length > 200) history.length = 200;
       saveHistory(); updateCount();
-      done("✓ انحفظ في السجل" + (chosen.length ? " (" + chosen.length + " كلمة)" : ""), true);
+      done("✓ انحفظ في السجل", true);
     };
 
     wrap.append(
-      h("p", { class: "save-q" }, "اختر اللي تبي تحفظه في السجل:"),
-      ...rows.map((r) => r.row), ...(textRow ? [textRow] : []),
+      h("p", { class: "save-q" }, "حفظ في السجل:"),
+      textRow,
       h("div", { class: "row", style: "margin-top:8px" },
-        h("button", { class: "btn primary", onclick: save }, "احفظ المحدد"),
+        h("button", { class: "btn primary", onclick: save }, "احفظ"),
         h("button", { class: "btn", onclick: () => done("تمام، ما انحفظ شي.", false) }, "لا")));
     return wrap;
   }
@@ -642,17 +527,12 @@ textarea::placeholder { color: var(--muted); }
       setTimeout(() => (copyBtn.textContent = "نسخ"), 1500);
     } }, "نسخ");
 
-    const googleBtn = h("button", { class: "btn small", onclick: () => {
-      const url = `https://translate.google.com/?sl=${e.dir === "ar-en" ? "ar" : "en"}&tl=${e.dir === "ar-en" ? "en" : "ar"}&text=${encodeURIComponent(e.text)}&op=translate`;
-      window.open(url, '_blank');
-    } }, "فتح في Google Translate");
-
     const box = $("resultBox");
     const noteEl = e.note ? h("p", { class: "hint" }, h("span", { class: "src-tag" }, e.note)) : null;
     
     box.replaceChildren(
       h("p", { class: "out", dir: outDir }, e.translation),
-      h("div", { class: "row" }, copyBtn, speakBtn(enText, "انطق الإنجليزي"), speakBtn(enText, "ببطء", true), googleBtn),
+      h("div", { class: "row" }, copyBtn, speakBtn(enText, "انطق الإنجليزي"), speakBtn(enText, "ببطء", true)),
       savePrompt(e),
       noteEl
     );
@@ -673,17 +553,11 @@ textarea::placeholder { color: var(--muted); }
         for (const d of m.defs) {
           const defBox = h("div", { class: "dict-def" });
           defBox.append(h("p", { class: "dict-def-text" }, d.def));
-          if (d.example) {
-            defBox.append(h("p", { class: "dict-example" }, d.example.ar, h("span", { class: "en" }, d.example.en)));
-          }
           posGroup.append(defBox);
         }
         dictBox.append(posGroup);
       }
       box.append(dictBox);
-    } else {
-      if (e.words.length) box.append(h("p", { class: "words-title" }, "الكلمات"), wordCards(e.words));
-      if (e.examples && e.examples.length) box.append(h("p", { class: "words-title" }, "أمثلة"), exampleList(e.examples));
     }
   }
 

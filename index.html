@@ -487,6 +487,12 @@ textarea::placeholder { color: var(--muted); }
     }));
   }
 
+  // الدالة التي كانت مفقودة
+  function exampleList(ex) {
+    return h("div", { class: "examples" }, ex.map((x) =>
+      h("div", { class: "ex" }, h("div", { class: "en-row" }, h("div", { class: "en", dir: "ltr" }, x.en), speakBtn(x.en)), h("div", { class: "ar" }, x.ar))));
+  }
+
   function findSaved(e) { return history.find((x) => norm(x.text) === norm(e.text) && x.dir === e.dir) || null; }
 
   function savePrompt(e) {
@@ -618,7 +624,7 @@ textarea::placeholder { color: var(--muted); }
       q.blanked = x.en.replace(new RegExp("\\b" + esc(w.en) + "\\b", "i"), "_____");
       q.answer = w.en; q.options = shuffle([w.en, ...distract(w, all, "en", 3)]);
     } else if (type === "tf") {
-      const other = distill(w, all, "ar", 1)[0];
+      const other = distract(w, all, "ar", 1)[0]; // تم إصلاح الخطأ المطبعي هنا
       const truth = !other || Math.random() < 0.5;
       q.shownAr = truth ? w.ar : other;
       q.answer = truth ? TRUE_ : FALSE_;

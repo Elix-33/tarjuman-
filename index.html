@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>tarjuman</title>
+<title>ترجمان — أفضل مترجم مجاني</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0E7C86">
@@ -66,11 +66,10 @@ textarea::placeholder { color: var(--muted); }
 .word .en { direction: ltr; text-align: left; font-weight: 600; font-size: 17px; line-height: 1.4; }
 .word .ar { color: var(--muted); font-size: 16px; line-height: 1.4; }
 
-/* Dictionary Styles (Like Google Translate) */
+/* Dictionary Styles */
 .dict-section { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
 .dict-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .dict-word { font-size: 24px; font-weight: 700; color: var(--ink); direction: ltr; }
-.dict-phonetic { color: var(--accent); font-size: 16px; direction: ltr; }
 .dict-pos-group { margin-bottom: 20px; }
 .dict-pos-title { font-size: 18px; font-weight: 600; color: var(--accent); margin: 0 0 8px; border-bottom: 1px solid var(--accent-soft); padding-bottom: 4px; display: inline-block; }
 .dict-def { margin-bottom: 12px; padding-inline-start: 12px; border-inline-start: 2px solid var(--line); }
@@ -186,15 +185,6 @@ textarea::placeholder { color: var(--muted); }
   </main>
 </div>
 
-<!-- استيراد مكتبة الترجمة الموسعة من Google (تجلب التعريفات والأمثلة) -->
-<script type="module">
-  import { translate as googleTranslateX } from 'https://cdn.jsdelivr.net/npm/google-translate-api-x@10.7.3/+esm';
-  import extendedTranslate from 'https://cdn.jsdelivr.net/npm/google-translate-extended-api@2.0.6/+esm';
-  
-  window.googleTranslateX = googleTranslateX;
-  window.extendedTranslate = extendedTranslate;
-</script>
-
 <script>
 (function () {
   "use strict";
@@ -301,107 +291,69 @@ textarea::placeholder { color: var(--muted); }
 
   /* ---------- Translation APIs ---------- */
   const isAbort = (e) => e && e.name === "AbortError";
+  const POS_MAP = { noun: "اسم", verb: "فعل", adjective: "صفة", adverb: "ظرف (حال)", pronoun: "ضمير", preposition: "حرف جر", conjunction: "حرف عطف", interjection: "حرف نداء", determiner: "مُحدد", abbreviation: "اختصار" };
 
-  async function translateWithX(text, dir, signal) {
-    if (!window.googleTranslateX) throw new Error("lib_missing");
-    const from = dir === "ar-en" ? "ar" : "en";
-    const to = dir === "ar-en" ? "en" : "ar";
-    const res = await window.googleTranslateX(text, { from, to, client: 'gtx' });
-    if (res && res.text) return res.text;
-    throw new Error("bad_response");
-  }
-
-  async function googleTranslateFallback(text, dir, signal) {
+  // دالة جلب الترجمة + القاموس مباشرة من جوجل
+  async function fetchFromGoogle(text, dir, signal) {
     const sl = dir === "ar-en" ? "ar" : "en";
     const tl = dir === "ar-en" ? "en" : "ar";
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
-    const r = await fetch(url, { signal });
-    if (!r.ok) throw new Error("net");
-    const j = await r.json();
-    if (!j || !j[0] || !Array.isArray(j[0])) throw new Error("bad");
-    return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
-  }
-
-  async function googleTranslateProxy(text, dir, signal) {
-    const sl = dir === "ar-en" ? "ar" : "en";
-    const tl = dir === "ar-en" ? "en" : "ar";
-    const targetUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
+    // dt=t (ترجمة)، dt=bd (قاموس)، dt=ex (أمثلة)
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&dt=ex&q=${encodeURIComponent(text)}`;
+    
     let r;
-    try { r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { signal }); } catch(e) {
-      r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, { signal });
+    try { 
+      r = await fetch(url, { signal }); 
+    } catch(e) {
+      // إذا حظر المتصفح الطلب المباشر، نستخدم بروكسي
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      r = await fetch(proxyUrl, { signal });
     }
+
     if (!r.ok) throw new Error("net");
     const j = await r.json();
-    if (!j || !j[0] || !Array.isArray(j[0])) throw new Error("bad");
-    return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
-  }
+    if (!j || !j[0]) throw new Error("bad");
 
-  async function translateText(text, dir, signal) {
-    try { return await translateWithX(text, dir, signal); } catch(e) {}
-    try { return await googleTranslateFallback(text, dir, signal); } catch(e) {}
-    try { return await googleTranslateProxy(text, dir, signal); } catch(e) {}
-    throw new Error("net");
-  }
+    // 1. استخراج الترجمة الأساسية
+    const translation = j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
 
-  /* ---------- Dictionary API (Google Translate Extended) ---------- */
-  const POS_MAP = {
-    noun: "اسم", verb: "فعل", adjective: "صفة", adverb: "ظرف (حال)", pronoun: "ضمير",
-    preposition: "حرف جر", conjunction: "حرف عطف", interjection: "حرف نداء", determiner: "مُحدد"
-  };
-
-  async function getDictionaryData(word, dir, signal) {
-    let enWord = word;
-    if (dir === "ar-en") {
-      enWord = await translateText(word, "ar-en", signal);
-    }
-    enWord = enWord.split(/\s+/)[0].replace(/[^a-zA-Z]/g, "");
-    if (!enWord) return null;
-
-    try {
-      if (!window.extendedTranslate) throw new Error("extended_lib_missing");
-      
-      // استخدام المكتبة الموسعة التي تجلب البيانات من Google Translate مباشرة
-      const res = await window.extendedTranslate(enWord, "en", "ar", {
-        wordInfo: true,
-        definitions: true,
-        examples: true
-      });
-
-      if (!res || !res.definitions) return null;
-
-      const result = {
-        word: enWord,
-        phonetic: res.wordTranscription || "",
-        meanings: []
-      };
-
-      // تحويل البيانات لتتوافق مع الواجهة
-      for (const pos in res.definitions) {
-        const posArabic = POS_MAP[pos] || pos;
-        const defs = res.definitions[pos].map((def, index) => {
-          let example = null;
-          if (res.examples && res.examples[index]) {
-            example = { en: res.examples[index], ar: "" }; // الترجمة ستأتي لاحقاً
-          }
-          return { def, example };
+    // 2. استخراج القاموس (إذا كانت الكلمة مفردة)
+    let dictData = null;
+    if (!/\s/.test(text.trim()) && j[1]) {
+      dictData = { word: text.trim(), meanings: [] };
+      for (const entry of j[1]) {
+        if (!entry || !entry[0]) continue;
+        const posEn = entry[0].toLowerCase();
+        const posAr = POS_MAP[posEn] || entry[0];
+        
+        // entry[1] يحتوي على التعريفات باللغة الإنجليزية
+        // entry[2] يحتوي على الترجمة العربية
+        const defs = (entry[1] || []).slice(0, 2).map((defEn, i) => {
+           return {
+             def: entry[2] && entry[2][i] ? entry[2][i] : defEn,
+             example: null // الأمثلة تأتي في مكان آخر، سنحاول التقاطها إن وجدت
+           };
         });
 
-        result.meanings.push({ pos: posArabic, defs });
+        // محاولة استخراج الأمثلة من نفس الاستجابة (إذا كانت موجودة)
+        // جوجل يضع الأمثلة عادة في جزء منفصل، لكننا سنكتفي بالتعريفات حالياً لضمان السرعة
+        
+        if (defs.length) dictData.meanings.push({ pos: posAr, defs });
       }
-
-      return result;
-    } catch (e) {
-      console.warn("Extended dictionary fetch error:", e);
-      return null;
     }
+
+    return { translation, dictData };
   }
 
   async function enrichWords(text, dir, translation, signal, sourceName) {
     const isSingleWord = !/\s/.test(text.trim());
     let dictData = null;
 
-    if (isSingleWord) {
-      try { dictData = await getDictionaryData(text, dir, signal); } catch(e) { console.warn(e); }
+    // جلب بيانات القاموس من جوجل
+    if (isSingleWord && navigator.onLine !== false) {
+      try { 
+        const res = await fetchFromGoogle(text, dir, signal);
+        dictData = res.dictData;
+      } catch(e) { console.warn("Dictionary fetch failed:", e); }
     }
 
     const enText = dir === "ar-en" ? translation : text;
@@ -419,7 +371,7 @@ textarea::placeholder { color: var(--muted); }
       if (single) return [{ en: top[0], ar: dir === "en-ar" ? translation : text.trim() }];
       const out = await Promise.all(top.map(async (w) => {
         try {
-          const ar = await googleTranslateFallback(w, "en-ar", signal).catch(() => googleTranslateProxy(w, "en-ar", signal));
+          const ar = await fetchFromGoogle(w, "en-ar", signal).then(r => r.translation);
           return ar && !/[a-z]/i.test(ar) ? { en: w, ar } : null;
         } catch (e) { if (isAbort(e)) throw e; return null; }
       }));
@@ -428,22 +380,6 @@ textarea::placeholder { color: var(--muted); }
 
     const examplesP = (async () => {
       const ex = [];
-      if (single && !dictData) {
-        try {
-          const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(top[0]), { signal });
-          if (r.ok) {
-            const j = await r.json();
-            const found = [];
-            for (const ent of Array.isArray(j) ? j : []) for (const m of ent.meanings || []) for (const d of m.definitions || [])
-              if (d.example && d.example.length <= 140 && found.length < 2 && !found.includes(d.example)) found.push(d.example);
-            const tr = await Promise.all(found.map(async (s) => {
-              try { return { en: s, ar: await googleTranslateFallback(s, "en-ar", signal) }; }
-              catch (e) { return null; }
-            }));
-            for (const x of tr) if (x) ex.push(x);
-          }
-        } catch (e) {}
-      }
       if (!ex.length && toks.length >= 3) ex.push({ en: enText.slice(0, 200), ar: dir === "ar-en" ? text : translation });
       return ex;
     })();
@@ -575,8 +511,15 @@ textarea::placeholder { color: var(--muted); }
       if (!data) {
         if (navigator.onLine !== false) {
           $("liveState").textContent = "جاري الترجمة أونلاين…";
-          try { data = await onlineTranslate(text, dir, signal); cachePut(text, dir, data); refreshCacheUI(); }
-          catch (e) { if (isAbort(e)) throw e; netErr = e; }
+          try { 
+            // 1. محاولة جلب الترجمة والقاموس من جوجل مباشرة
+            const res = await fetchFromGoogle(text, dir, signal);
+            if (res && res.translation) {
+              data = await enrichWords(text, dir, res.translation, signal, "Google Translate");
+              data.dictData = res.dictData; // إرفاق القاموس
+              cachePut(text, dir, data); refreshCacheUI();
+            }
+          } catch (e) { if (isAbort(e)) throw e; netErr = e; }
         }
         if (!data && modelReady[dir]) {
           $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
@@ -619,13 +562,6 @@ textarea::placeholder { color: var(--muted); }
       if (my === reqSeq) $("liveState").textContent = "";
       goBtn.disabled = false;
     }
-  }
-
-  async function onlineTranslate(text, dir, signal) {
-    const src = text.slice(0, 450);
-    let translation = await translateText(src, dir, signal);
-    if (!translation) throw new Error("net");
-    return await enrichWords(text, dir, translation, signal, "Google Translate");
   }
 
   /* ---------- UI Render ---------- */
@@ -726,7 +662,6 @@ textarea::placeholder { color: var(--muted); }
       dictBox.append(
         h("div", { class: "dict-header" }, 
           h("span", { class: "dict-word" }, e.dictData.word),
-          e.dictData.phonetic ? h("span", { class: "dict-phonetic" }, e.dictData.phonetic) : null,
           speakBtn(e.dictData.word)
         )
       );

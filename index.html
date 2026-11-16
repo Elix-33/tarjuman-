@@ -315,7 +315,7 @@ textarea::placeholder { color: var(--muted); }
     const params = `client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&q=${encodeURIComponent(text)}`;
     const url = `https://translate.googleapis.com/translate_a/single?${params}`;
 
-    // قائمة الوسطاء (سنحاول الاتصال المباشر، ثم 3 وسطاء مختلفين حتى ينجح أحدهم)
+    // 3 وسطاء مختلفة لضمان العمل على الآيفون
     const endpoints = [
       url,
       `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
@@ -326,13 +326,15 @@ textarea::placeholder { color: var(--muted); }
     for (let i = 0; i < endpoints.length; i++) {
       try {
         const r = await fetch(endpoints[i], { signal });
-        if (r.ok) {
-          const json = await r.json();
-          return parseGoogleResponse(json, text);
-        }
+        if (!r.ok) continue;
+        
+        const textRes = await r.text();
+        let json;
+        try { json = JSON.parse(textRes); } catch (e) { continue; }
+        
+        return parseGoogleResponse(json, text);
       } catch (e) {
         if (e.name === "AbortError") throw e;
-        // إذا فشل الوسيط، ننتقل للوسيط التالي
       }
     }
     throw new Error("net");

@@ -65,6 +65,20 @@ textarea::placeholder { color: var(--muted); }
 .word { border: 1px solid var(--line); border-inline-start: 4px solid var(--accent); border-radius: 10px; padding: 8px 12px; background: var(--paper); }
 .word .en { direction: ltr; text-align: left; font-weight: 600; font-size: 17px; line-height: 1.4; }
 .word .ar { color: var(--muted); font-size: 16px; line-height: 1.4; }
+
+/* Dictionary Styles (Like Google Translate) */
+.dict-section { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.dict-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.dict-word { font-size: 24px; font-weight: 700; color: var(--ink); direction: ltr; }
+.dict-phonetic { color: var(--accent); font-size: 16px; direction: ltr; }
+.dict-pos-group { margin-bottom: 20px; }
+.dict-pos-title { font-size: 18px; font-weight: 600; color: var(--accent); margin: 0 0 8px; border-bottom: 1px solid var(--accent-soft); padding-bottom: 4px; display: inline-block; }
+.dict-def { margin-bottom: 12px; padding-inline-start: 12px; border-inline-start: 2px solid var(--line); }
+.dict-def-text { font-size: 17px; margin: 0 0 4px; }
+.dict-example { font-size: 15px; color: var(--muted); font-style: italic; margin: 4px 0 0; }
+.dict-example .en { direction: ltr; text-align: left; display: block; font-family: monospace; font-size: 14px; margin-top: 2px; }
+
+/* Quiz & History */
 .quiz h2 { margin: 0 0 4px; font-size: 20px; }
 .quiz .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; margin-bottom: 14px; }
 .bar { height: 6px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; margin-bottom: 18px; }
@@ -172,10 +186,13 @@ textarea::placeholder { color: var(--muted); }
   </main>
 </div>
 
-<!-- استيراد مكتبة الترجمة الدقيقة من Google -->
+<!-- استيراد مكتبة الترجمة الموسعة من Google (تجلب التعريفات والأمثلة) -->
 <script type="module">
   import { translate as googleTranslateX } from 'https://cdn.jsdelivr.net/npm/google-translate-api-x@10.7.3/+esm';
+  import extendedTranslate from 'https://cdn.jsdelivr.net/npm/google-translate-extended-api@2.0.6/+esm';
+  
   window.googleTranslateX = googleTranslateX;
+  window.extendedTranslate = extendedTranslate;
 </script>
 
 <script>
@@ -273,27 +290,18 @@ textarea::placeholder { color: var(--muted); }
   $("clearBtn").addEventListener("click", () => { input.value = ""; stopLive(); $("resultBox").replaceChildren(); updateDir(); input.focus(); });
   goBtn.addEventListener("click", () => { clearTimeout(liveTimer); doTranslate(false); });
 
-  // زر اللصق الجديد
   $("pasteBtn").addEventListener("click", async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) {
-        input.value = text;
-        updateDir();
-        doTranslate(false);
-      }
-    } catch (err) {
-      alert("تعذر اللصق التلقائي. الرجاء الضغط مطولاً على حقل النص واختيار 'لصق' يدوياً.");
-    }
+      if (text) { input.value = text; updateDir(); doTranslate(false); }
+    } catch (err) { alert("تعذر اللصق التلقائي. الرجاء الضغط مطولاً على حقل النص واختيار 'لصق' يدوياً."); }
   });
 
   function showError(msg) { $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, msg)); }
 
-  /* ---------- Translation APIs (Google فقط) ---------- */
-  const STOP = new Set(("a an the and or but if of to in on at by for with from as is am are was were be been being it its this that these those i you he she we they me him her us them my your his our their do does did have has had will would can could should may might not no so than then there here what which who whom when where why how into out up down over under about very just also").split(" "));
+  /* ---------- Translation APIs ---------- */
   const isAbort = (e) => e && e.name === "AbortError";
 
-  // 1. دالة الترجمة عبر المكتبة الدقيقة
   async function translateWithX(text, dir, signal) {
     if (!window.googleTranslateX) throw new Error("lib_missing");
     const from = dir === "ar-en" ? "ar" : "en";
@@ -303,7 +311,6 @@ textarea::placeholder { color: var(--muted); }
     throw new Error("bad_response");
   }
 
-  // 2. دالة الترجمة القديمة (احتياطية)
   async function googleTranslateFallback(text, dir, signal) {
     const sl = dir === "ar-en" ? "ar" : "en";
     const tl = dir === "ar-en" ? "en" : "ar";
@@ -315,15 +322,12 @@ textarea::placeholder { color: var(--muted); }
     return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
   }
 
-  // 3. دالة وسيطة (Proxy) لتجاوز حظر CORS في الآيفون
   async function googleTranslateProxy(text, dir, signal) {
     const sl = dir === "ar-en" ? "ar" : "en";
     const tl = dir === "ar-en" ? "en" : "ar";
     const targetUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
     let r;
-    try {
-      r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { signal });
-    } catch(e) {
+    try { r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { signal }); } catch(e) {
       r = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, { signal });
     }
     if (!r.ok) throw new Error("net");
@@ -332,37 +336,74 @@ textarea::placeholder { color: var(--muted); }
     return j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
   }
 
-  async function onlineTranslate(text, dir, signal) {
-    const src = text.slice(0, 450);
-    let translation = null;
-
-    // المحاولة 1: المكتبة الدقيقة
-    try {
-      translation = await translateWithX(src, dir, signal);
-      if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate (دقيق)");
-    } catch (e) { if (isAbort(e)) throw e; console.warn("X lib failed:", e); }
-
-    // المحاولة 2: الرابط القديم
-    if (!translation) {
-      try {
-        translation = await googleTranslateFallback(src, dir, signal);
-        if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate");
-      } catch (e) { if (isAbort(e)) throw e; console.warn("Fallback failed:", e); }
-    }
-
-    // المحاولة 3: الـ Proxy (لتجاوز حظر الآيفون)
-    if (!translation) {
-      try {
-        translation = await googleTranslateProxy(src, dir, signal);
-        if (translation) return await enrichWords(text, dir, translation, signal, "Google Translate (Proxy)");
-      } catch (e) { if (isAbort(e)) throw e; console.warn("Proxy failed:", e); }
-    }
-
-    // إذا فشلت كل محاولات جوجل، نرمي خطأ (ولن نستخدم MyMemory السيء)
+  async function translateText(text, dir, signal) {
+    try { return await translateWithX(text, dir, signal); } catch(e) {}
+    try { return await googleTranslateFallback(text, dir, signal); } catch(e) {}
+    try { return await googleTranslateProxy(text, dir, signal); } catch(e) {}
     throw new Error("net");
   }
 
+  /* ---------- Dictionary API (Google Translate Extended) ---------- */
+  const POS_MAP = {
+    noun: "اسم", verb: "فعل", adjective: "صفة", adverb: "ظرف (حال)", pronoun: "ضمير",
+    preposition: "حرف جر", conjunction: "حرف عطف", interjection: "حرف نداء", determiner: "مُحدد"
+  };
+
+  async function getDictionaryData(word, dir, signal) {
+    let enWord = word;
+    if (dir === "ar-en") {
+      enWord = await translateText(word, "ar-en", signal);
+    }
+    enWord = enWord.split(/\s+/)[0].replace(/[^a-zA-Z]/g, "");
+    if (!enWord) return null;
+
+    try {
+      if (!window.extendedTranslate) throw new Error("extended_lib_missing");
+      
+      // استخدام المكتبة الموسعة التي تجلب البيانات من Google Translate مباشرة
+      const res = await window.extendedTranslate(enWord, "en", "ar", {
+        wordInfo: true,
+        definitions: true,
+        examples: true
+      });
+
+      if (!res || !res.definitions) return null;
+
+      const result = {
+        word: enWord,
+        phonetic: res.wordTranscription || "",
+        meanings: []
+      };
+
+      // تحويل البيانات لتتوافق مع الواجهة
+      for (const pos in res.definitions) {
+        const posArabic = POS_MAP[pos] || pos;
+        const defs = res.definitions[pos].map((def, index) => {
+          let example = null;
+          if (res.examples && res.examples[index]) {
+            example = { en: res.examples[index], ar: "" }; // الترجمة ستأتي لاحقاً
+          }
+          return { def, example };
+        });
+
+        result.meanings.push({ pos: posArabic, defs });
+      }
+
+      return result;
+    } catch (e) {
+      console.warn("Extended dictionary fetch error:", e);
+      return null;
+    }
+  }
+
   async function enrichWords(text, dir, translation, signal, sourceName) {
+    const isSingleWord = !/\s/.test(text.trim());
+    let dictData = null;
+
+    if (isSingleWord) {
+      try { dictData = await getDictionaryData(text, dir, signal); } catch(e) { console.warn(e); }
+    }
+
     const enText = dir === "ar-en" ? translation : text;
     const toks = (enText.toLowerCase().match(/[a-z][a-z'-]*/g) || []).map((w) => w.replace(/^['-]+|['-]+$/g, "")).filter(Boolean);
     const single = toks.length === 1;
@@ -387,7 +428,7 @@ textarea::placeholder { color: var(--muted); }
 
     const examplesP = (async () => {
       const ex = [];
-      if (single) {
+      if (single && !dictData) {
         try {
           const r = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(top[0]), { signal });
           if (r.ok) {
@@ -396,19 +437,19 @@ textarea::placeholder { color: var(--muted); }
             for (const ent of Array.isArray(j) ? j : []) for (const m of ent.meanings || []) for (const d of m.definitions || [])
               if (d.example && d.example.length <= 140 && found.length < 2 && !found.includes(d.example)) found.push(d.example);
             const tr = await Promise.all(found.map(async (s) => {
-              try { return { en: s, ar: await googleTranslateFallback(s, "en-ar", signal).catch(() => googleTranslateProxy(s, "en-ar", signal)) }; }
-              catch (e) { if (isAbort(e)) throw e; return null; }
+              try { return { en: s, ar: await googleTranslateFallback(s, "en-ar", signal) }; }
+              catch (e) { return null; }
             }));
             for (const x of tr) if (x) ex.push(x);
           }
-        } catch (e) { if (isAbort(e)) throw e; }
+        } catch (e) {}
       }
       if (!ex.length && toks.length >= 3) ex.push({ en: enText.slice(0, 200), ar: dir === "ar-en" ? text : translation });
       return ex;
     })();
 
     const [words, examples] = await Promise.all([wordsP, examplesP]);
-    return { translation, words, examples, note: "من " + sourceName };
+    return { translation, words, examples, dictData, note: "من " + sourceName };
   }
 
   /* ---------- Cache ---------- */
@@ -432,11 +473,8 @@ textarea::placeholder { color: var(--muted); }
     $("cacheState").textContent = "(تم المسح ✓)";
   });
 
-  /* ---------- Offline Miss (بدون قاموس) ---------- */
   function offlineMiss(text, dir) {
-    $("resultBox").replaceChildren(
-      h("div", { class: "err", role: "alert" }, "لا يوجد اتصال بالإنترنت، ولم يتم تنزيل نموذج الأوفلاين. يرجى الاتصال أو تنزيل النموذج."),
-    );
+    $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, "لا يوجد اتصال بالإنترنت، ولم يتم تنزيل نموذج الأوفلاين. يرجى الاتصال أو تنزيل النموذج."));
   }
 
   function updNet() { $("netState").textContent = navigator.onLine === false ? "● بدون إنترنت" : ""; }
@@ -454,41 +492,27 @@ textarea::placeholder { color: var(--muted); }
     if (!tfLib) { tfLib = await import(MODEL_LIB); tfLib.env.allowLocalModels = false; }
     return tfLib;
   }
-  
   async function getPipe(dir, onProgress) {
     if (!pipes[dir]) {
       const L = await getLib();
-      pipes[dir] = L.pipeline("translation", MODELS[dir], {
-        quantized: true, 
-        progress_callback: onProgress
-      });
+      pipes[dir] = L.pipeline("translation", MODELS[dir], { quantized: true, progress_callback: onProgress });
       pipes[dir].catch(() => { delete pipes[dir]; });
     }
     return pipes[dir];
   }
-
   function chunkText(text, maxLength = 400) {
     if (text.length <= maxLength) return [text];
-    const chunks = [];
-    let current = "";
+    const chunks = []; let current = "";
     const sentences = text.split(/(?<=[.!?؟])\s+/);
     for (const sentence of sentences) {
-      if ((current + " " + sentence).length > maxLength && current) {
-        chunks.push(current.trim());
-        current = sentence;
-      } else {
-        current += (current ? " " : "") + sentence;
-      }
+      if ((current + " " + sentence).length > maxLength && current) { chunks.push(current.trim()); current = sentence; }
+      else { current += (current ? " " : "") + sentence; }
     }
     if (current.trim()) chunks.push(current.trim());
     return chunks;
   }
-
   async function modelTranslate(text, dir) {
-    const p = await getPipe(dir);
-    const chunks = chunkText(text);
-    let fullTranslation = "";
-    
+    const p = await getPipe(dir); const chunks = chunkText(text); let fullTranslation = "";
     for (const chunk of chunks) {
       const out = await p(chunk, { max_length: 512 });
       const part = String((out && out[0] && out[0].translation_text) || "").trim();
@@ -496,7 +520,6 @@ textarea::placeholder { color: var(--muted); }
     }
     return fullTranslation.trim();
   }
-
   async function modelFallback(text, dir) {
     const translation = await modelTranslate(text, dir);
     if (!translation) return null;
@@ -506,12 +529,9 @@ textarea::placeholder { color: var(--muted); }
   const dlBtn = $("dlBtn"), dlState = $("dlState");
   function refreshModelUI() {
     const both = modelReady["en-ar"] && modelReady["ar-en"];
-    dlState.textContent = both ? "✓ النموذج جاهز — الترجمة تشتغل بدون إنترنت"
-      : (modelReady["en-ar"] || modelReady["ar-en"]) ? "نزّلت اتجاه واحد بس، اضغط عشان تكمل."
-      : "ما نزّلت النموذج بعد (80 ميجا فقط).";
+    dlState.textContent = both ? "✓ النموذج جاهز — الترجمة تشتغل بدون إنترنت" : (modelReady["en-ar"] || modelReady["ar-en"]) ? "نزّلت اتجاه واحد بس، اضغط عشان تكمل." : "ما نزّلت النموذج بعد (80 ميجا فقط).";
     dlBtn.textContent = both ? "تحقق من النموذج" : "نزّل نموذج الترجمة";
   }
-  
   dlBtn.addEventListener("click", async () => {
     if (navigator.onLine === false) { dlState.textContent = "تحتاج إنترنت للتنزيل (مرة وحدة فقط)."; return; }
     dlBtn.disabled = true;
@@ -522,34 +542,23 @@ textarea::placeholder { color: var(--muted); }
         dlState.textContent = "جاري تنزيل " + names[dir] + "…";
         await getPipe(dir, (p) => { if (p && p.status === "progress" && typeof p.progress === "number") dlState.textContent = "جاري تنزيل " + names[dir] + "… " + Math.round(p.progress) + "%"; });
         modelReady[dir] = true; write(MKEY, modelReady, () => {});
-      } catch (err) {
-        dlState.textContent = "فشل التنزيل. تأكد من الإنترنت.";
-        dlBtn.disabled = false; refreshModelUI(); return;
-      }
+      } catch (err) { dlState.textContent = "فشل التنزيل. تأكد من الإنترنت."; dlBtn.disabled = false; refreshModelUI(); return; }
     }
     dlBtn.disabled = false; refreshModelUI();
   });
 
   $("delModelBtn").addEventListener("click", async () => {
-    if (!confirm("هل أنت متأكد من حذف نموذج الترجمة بدون إنترنت؟ ستحتاج لتنزيله مرة أخرى إذا أردت استخدامه.")) return;
+    if (!confirm("هل أنت متأكد من حذف نموذج الترجمة بدون إنترنت؟")) return;
     try {
-      const keys = await caches.keys();
-      for (const k of keys) await caches.delete(k);
-      localStorage.removeItem(MKEY);
-      modelReady = {};
-      tfLib = null;
-      for (const k in pipes) delete pipes[k];
-      refreshModelUI();
-      alert("تم مسح النموذج بنجاح! تم توفير المساحة على جهازك.");
-    } catch (e) {
-      alert("حدث خطأ أثناء المسح.");
-    }
+      const keys = await caches.keys(); for (const k of keys) await caches.delete(k);
+      localStorage.removeItem(MKEY); modelReady = {}; tfLib = null; for (const k in pipes) delete pipes[k];
+      refreshModelUI(); alert("تم مسح النموذج بنجاح!");
+    } catch (e) { alert("حدث خطأ أثناء المسح."); }
   });
 
-  refreshModelUI();
-  refreshCacheUI();
+  refreshModelUI(); refreshCacheUI();
 
-  /* ---------- MAIN TRANSLATE (الأونلاين دائماً أولاً) ---------- */
+  /* ---------- MAIN TRANSLATE ---------- */
   async function doTranslate(auto) {
     const text = input.value.trim();
     if (!text) { input.focus(); return; }
@@ -564,23 +573,20 @@ textarea::placeholder { color: var(--muted); }
       let data = cacheGet(text, dir), netErr = null;
 
       if (!data) {
-        // 1. الأونلاين دائماً هو الأولوية (الأدق)
         if (navigator.onLine !== false) {
           $("liveState").textContent = "جاري الترجمة أونلاين…";
           try { data = await onlineTranslate(text, dir, signal); cachePut(text, dir, data); refreshCacheUI(); }
           catch (e) { if (isAbort(e)) throw e; netErr = e; }
         }
-        
-        // 2. إذا فشل الأونلاين، نستخدم النموذج (إذا كان موجوداً)
         if (!data && modelReady[dir]) {
           $("liveState").textContent = "جاري الترجمة بالنموذج على جهازك…";
           try { data = await modelFallback(text, dir); } catch (e) { data = null; }
         }
-
         if (!data && netErr) throw netErr;
       }
       if (my !== reqSeq) return;
       if (!data) { offlineMiss(text, dir); return; }
+      
       const translation = String(data.translation || "").trim();
       if (!translation) { showError("ما قدرت أترجم هذا النص."); return; }
 
@@ -599,7 +605,12 @@ textarea::placeholder { color: var(--muted); }
         if (en && ar && examples.length < 3) examples.push({ en, ar });
       }
 
-      const entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: Date.now(), dir, text, translation, words, examples, note: data.note || "" };
+      const entry = { 
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), 
+        ts: Date.now(), dir, text, translation, words, examples, 
+        dictData: data.dictData,
+        note: data.note || "" 
+      };
       renderResult(entry);
     } catch (err) {
       if (my !== reqSeq) return;
@@ -608,6 +619,13 @@ textarea::placeholder { color: var(--muted); }
       if (my === reqSeq) $("liveState").textContent = "";
       goBtn.disabled = false;
     }
+  }
+
+  async function onlineTranslate(text, dir, signal) {
+    const src = text.slice(0, 450);
+    let translation = await translateText(src, dir, signal);
+    if (!translation) throw new Error("net");
+    return await enrichWords(text, dir, translation, signal, "Google Translate");
   }
 
   /* ---------- UI Render ---------- */
@@ -661,6 +679,7 @@ textarea::placeholder { color: var(--muted); }
         chosen.forEach((w) => existing.words.push(w));
         if (wantText) existing.noText = false;
         if (!(existing.examples && existing.examples.length) && e.examples) existing.examples = e.examples;
+        if (!existing.dictData && e.dictData) existing.dictData = e.dictData;
       } else {
         history.unshift(Object.assign({}, e, { words: chosen, noText: showText ? !textBox.checked : false }));
       }
@@ -694,17 +713,46 @@ textarea::placeholder { color: var(--muted); }
 
     const box = $("resultBox");
     const noteEl = e.note ? h("p", { class: "hint" }, h("span", { class: "src-tag" }, e.note)) : null;
+    
     box.replaceChildren(
       h("p", { class: "out", dir: outDir }, e.translation),
       h("div", { class: "row" }, copyBtn, speakBtn(enText, "انطق الإنجليزي"), speakBtn(enText, "ببطء", true), googleBtn),
       savePrompt(e),
       noteEl
     );
-    if (e.words.length) box.append(h("p", { class: "words-title" }, "الكلمات"), wordCards(e.words));
-    if (e.examples && e.examples.length) box.append(h("p", { class: "words-title" }, "أمثلة"), exampleList(e.examples));
+
+    if (e.dictData) {
+      const dictBox = h("div", { class: "dict-section" });
+      dictBox.append(
+        h("div", { class: "dict-header" }, 
+          h("span", { class: "dict-word" }, e.dictData.word),
+          e.dictData.phonetic ? h("span", { class: "dict-phonetic" }, e.dictData.phonetic) : null,
+          speakBtn(e.dictData.word)
+        )
+      );
+      
+      for (const m of e.dictData.meanings) {
+        const posGroup = h("div", { class: "dict-pos-group" });
+        posGroup.append(h("div", { class: "dict-pos-title" }, m.pos));
+        
+        for (const d of m.defs) {
+          const defBox = h("div", { class: "dict-def" });
+          defBox.append(h("p", { class: "dict-def-text" }, d.def));
+          if (d.example) {
+            defBox.append(h("p", { class: "dict-example" }, d.example.ar, h("span", { class: "en" }, d.example.en)));
+          }
+          posGroup.append(defBox);
+        }
+        dictBox.append(posGroup);
+      }
+      box.append(dictBox);
+    } else {
+      if (e.words.length) box.append(h("p", { class: "words-title" }, "الكلمات"), wordCards(e.words));
+      if (e.examples && e.examples.length) box.append(h("p", { class: "words-title" }, "أمثلة"), exampleList(e.examples));
+    }
   }
 
-  /* ---------- Quiz & History (بدون تغييرات جوهرية) ---------- */
+  /* ---------- Quiz & History ---------- */
   const MASTER = 30;
   const streakOf = (w) => ((stats[norm(w.en)] || {}).s) || 0;
   const isMastered = (w) => streakOf(w) >= MASTER;

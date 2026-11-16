@@ -65,8 +65,6 @@ textarea::placeholder { color: var(--muted); }
 .word { border: 1px solid var(--line); border-inline-start: 4px solid var(--accent); border-radius: 10px; padding: 8px 12px; background: var(--paper); }
 .word .en { direction: ltr; text-align: left; font-weight: 600; font-size: 17px; line-height: 1.4; }
 .word .ar { color: var(--muted); font-size: 16px; line-height: 1.4; }
-
-/* Dictionary Styles */
 .dict-section { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
 .dict-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .dict-word { font-size: 24px; font-weight: 700; color: var(--ink); direction: ltr; }
@@ -74,8 +72,6 @@ textarea::placeholder { color: var(--muted); }
 .dict-pos-title { font-size: 18px; font-weight: 600; color: var(--accent); margin: 0 0 8px; border-bottom: 1px solid var(--accent-soft); padding-bottom: 4px; display: inline-block; }
 .dict-def { margin-bottom: 12px; padding-inline-start: 12px; border-inline-start: 2px solid var(--line); }
 .dict-def-text { font-size: 17px; margin: 0 0 4px; }
-
-/* Quiz & History */
 .quiz h2 { margin: 0 0 4px; font-size: 20px; }
 .quiz .meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; margin-bottom: 14px; }
 .bar { height: 6px; background: var(--accent-soft); border-radius: 99px; overflow: hidden; margin-bottom: 18px; }
@@ -287,26 +283,30 @@ textarea::placeholder { color: var(--muted); }
 
   function showError(msg) { $("resultBox").replaceChildren(h("div", { class: "err", role: "alert" }, msg)); }
 
-  /* ---------- Translation API (Google Direct + Proxy) ---------- */
+  /* ---------- Translation API (Google Multi-Proxy) ---------- */
   const isAbort = (e) => e && e.name === "AbortError";
   const POS_MAP = { noun: "اسم", verb: "فعل", adjective: "صفة", adverb: "ظرف (حال)", pronoun: "ضمير", preposition: "حرف جر", conjunction: "حرف عطف", interjection: "حرف نداء", determiner: "مُحدد", abbreviation: "اختصار" };
 
   function parseGoogleResponse(j, text) {
-    if (!j || !j[0]) throw new Error("bad");
-    const translation = j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
-    let dictData = null;
-    if (!/\s/.test(text.trim()) && j[1]) {
-      dictData = { word: text.trim(), meanings: [] };
-      for (const entry of j[1]) {
-        if (!entry || !entry[0]) continue;
-        const posAr = POS_MAP[entry[0].toLowerCase()] || entry[0];
-        const defs = (entry[1] || []).slice(0, 2).map((defEn, i) => ({
-          def: entry[2] && entry[2][i] ? entry[2][i] : defEn
-        }));
-        if (defs.length) dictData.meanings.push({ pos: posAr, defs });
+    try {
+      if (!j || !j[0] || !Array.isArray(j[0])) throw new Error("bad");
+      const translation = j[0].map(x => x && x[0] ? x[0] : "").join("").trim();
+      let dictData = null;
+      if (!/\s/.test(text.trim()) && j[1]) {
+        dictData = { word: text.trim(), meanings: [] };
+        for (const entry of j[1]) {
+          if (!entry || !entry[0]) continue;
+          const posAr = POS_MAP[entry[0].toLowerCase()] || entry[0];
+          const defs = (entry[1] || []).slice(0, 2).map((defEn, i) => ({
+            def: entry[2] && entry[2][i] ? entry[2][i] : defEn
+          }));
+          if (defs.length) dictData.meanings.push({ pos: posAr, defs });
+        }
       }
+      return { translation, dictData };
+    } catch (e) {
+      throw new Error("parse_error");
     }
-    return { translation, dictData };
   }
 
   async function fetchFromGoogle(text, dir, signal) {
@@ -315,19 +315,26 @@ textarea::placeholder { color: var(--muted); }
     const params = `client=gtx&sl=${sl}&tl=${tl}&dt=t&dt=bd&q=${encodeURIComponent(text)}`;
     const url = `https://translate.googleapis.com/translate_a/single?${params}`;
 
-    // 1) المحاولة المباشرة
-    try {
-      const r = await fetch(url, { signal });
-      if (r.ok) return parseGoogleResponse(await r.json(), text);
-    } catch (e) { if (e.name === "AbortError") throw e; }
+    // قائمة الوسطاء (سنحاول الاتصال المباشر، ثم 3 وسطاء مختلفين حتى ينجح أحدهم)
+    const endpoints = [
+      url,
+      `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+    ];
 
-    // 2) المرور عبر وسيط CORS عند الحظر
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    try {
-      const r2 = await fetch(proxyUrl, { signal });
-      if (r2.ok) return parseGoogleResponse(await r2.json(), text);
-    } catch (e) { if (e.name === "AbortError") throw e; }
-
+    for (let i = 0; i < endpoints.length; i++) {
+      try {
+        const r = await fetch(endpoints[i], { signal });
+        if (r.ok) {
+          const json = await r.json();
+          return parseGoogleResponse(json, text);
+        }
+      } catch (e) {
+        if (e.name === "AbortError") throw e;
+        // إذا فشل الوسيط، ننتقل للوسيط التالي
+      }
+    }
     throw new Error("net");
   }
 
@@ -487,7 +494,6 @@ textarea::placeholder { color: var(--muted); }
     }));
   }
 
-  // الدالة التي كانت مفقودة
   function exampleList(ex) {
     return h("div", { class: "examples" }, ex.map((x) =>
       h("div", { class: "ex" }, h("div", { class: "en-row" }, h("div", { class: "en", dir: "ltr" }, x.en), speakBtn(x.en)), h("div", { class: "ar" }, x.ar))));
@@ -624,7 +630,7 @@ textarea::placeholder { color: var(--muted); }
       q.blanked = x.en.replace(new RegExp("\\b" + esc(w.en) + "\\b", "i"), "_____");
       q.answer = w.en; q.options = shuffle([w.en, ...distract(w, all, "en", 3)]);
     } else if (type === "tf") {
-      const other = distract(w, all, "ar", 1)[0]; // تم إصلاح الخطأ المطبعي هنا
+      const other = distract(w, all, "ar", 1)[0]; 
       const truth = !other || Math.random() < 0.5;
       q.shownAr = truth ? w.ar : other;
       q.answer = truth ? TRUE_ : FALSE_;
